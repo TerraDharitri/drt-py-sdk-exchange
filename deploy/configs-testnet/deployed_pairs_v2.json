@@ -1,0 +1,30 @@
+[
+    {
+        "firstToken": "WEGLD-dd8471",
+        "secondToken": "MEX-708726",
+        "lpToken": "EGLDMEX-f63683",
+        "address": "erd1qqqqqqqqqqqqqpgqzjstzefzeastekqpxz6ysh3d0k9eap9aexkscvsdqn",
+        "version": 2
+    },
+    {
+        "firstToken": "WEGLD-dd8471",
+        "secondToken": "USDC-5bee92",
+        "lpToken": "EGLDUSDC-ea9998",
+        "address": "erd1qqqqqqqqqqqqqpgqfsfcrxnlym0fjlnuvus2dmlz6ju9cpsfexks8wq4d4",
+        "version": 2
+    },
+    {
+        "firstToken": "WEGLD-dd8471",
+        "secondToken": "RIDE-d3a377",
+        "lpToken": "EGLDRIDE-42736d",
+        "address": "erd1qqqqqqqqqqqqqpgqzt7clww7329ajkq07x295h7hvl2hgnsaexks5m7sen",
+        "version": 2
+    },
+    {
+        "firstToken": "UTK-f4e83f",
+        "secondToken": "WEGLD-dd8471",
+        "lpToken": "UTKWEGLD-dd657e",
+        "address": "erd1qqqqqqqqqqqqqpgqluxegqj5fymplf8vj3qen6ryh03dukhxexks43z5kc",
+        "version": 2
+    }
+]

@@ -1,0 +1,14 @@
+[
+    {
+        "address": "erd1qqqqqqqqqqqqqpgqhtuarsv8v2g6wn5z85e3r7nntr3990frexksj4devm",
+        "metastake_token": "METARIDELK-c172cb",
+        "staking_token": "RIDE-d3a377",
+        "lp_token": "EGLDRIDE-42736d",
+        "farm_token": "EGLDRIDEFL-8f0a0a",
+        "stake_token": "SRIDE-81c226",
+        "lp_address": "erd1qqqqqqqqqqqqqpgqzt7clww7329ajkq07x295h7hvl2hgnsaexks5m7sen",
+        "farm_address": "erd1qqqqqqqqqqqqqpgqzqlavpqgwkrnslzrl05aqms2au2327asexksc4u3qg",
+        "stake_address": "erd1qqqqqqqqqqqqqpgqsaryrfe84lqez2nvlv837krxnmp7zzgtexksjnynn3",
+        "version": 2
+    }
+]

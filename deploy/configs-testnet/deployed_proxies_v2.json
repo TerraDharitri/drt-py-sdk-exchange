@@ -1,0 +1,13 @@
+[
+    {
+        "token": "MEX-708726",
+        "locked_tokens": [
+            "LKMEX-828c89",
+            "XMEX-e42221"
+        ],
+        "proxy_farm_token": "XMEXFARM-2caeda",
+        "proxy_lp_token": "XMEXLP-c175bb",
+        "address": "erd1qqqqqqqqqqqqqpgqkh74aapaz5cahf4rf8fzyxvqkh6ca86yexksjtmmnm",
+        "version": 2
+    }
+]

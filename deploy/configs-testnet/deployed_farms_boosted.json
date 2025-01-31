@@ -1,0 +1,30 @@
+[
+    {
+        "farmingToken": "EGLDMEX-f63683",
+        "farmToken": "EGLDMEXFL-6a8961",
+        "farmedToken": "MEX-708726",
+        "address": "erd1qqqqqqqqqqqqqpgqk232ukl7944vmjq44krjns0yturh6ms9exksgmr2sc",
+        "version": 4
+    },
+    {
+        "farmingToken": "EGLDUSDC-ea9998",
+        "farmToken": "EGLDUSDCFL-07eaa8",
+        "farmedToken": "MEX-708726",
+        "address": "erd1qqqqqqqqqqqqqpgq3qw8j5kd6295y8ud4kwc7k3qyhdcvu6fexksas5lm6",
+        "version": 4
+    },
+    {
+        "farmingToken": "EGLDRIDE-42736d",
+        "farmToken": "EGLDRIDEFL-8f0a0a",
+        "farmedToken": "MEX-708726",
+        "address": "erd1qqqqqqqqqqqqqpgqzqlavpqgwkrnslzrl05aqms2au2327asexksc4u3qg",
+        "version": 4
+    },
+    {
+        "farmingToken": "UTKWEGLD-dd657e",
+        "farmToken": "UTKWEGLDFL-258770",
+        "farmedToken": "MEX-708726",
+        "address": "erd1qqqqqqqqqqqqqpgqv2w0j3wveyv09mclcnnulcn0d5vwuhe8exksu2n3rz",
+        "version": 4
+    }
+]
