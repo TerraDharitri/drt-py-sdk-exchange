@@ -7,9 +7,9 @@ from dharitri_sdk.core.constants import METACHAIN_ID
 
 class NetworkStatusOnShard:
     def __init__(self, data: Dict[str, Any]) -> None:
-        self.current_round = data.get("erd_current_round", 0)
-        self.current_epoch = data.get("erd_epoch_number", 0)
-        self.current_nonce = data.get("erd_nonce", 0)
+        self.current_round = data.get("drt_current_round", 0)
+        self.current_epoch = data.get("drt_epoch_number", 0)
+        self.current_nonce = data.get("drt_nonce", 0)
 
 
 class ProxyExtension(ProxyNetworkProvider):
