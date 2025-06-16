@@ -5,8 +5,8 @@ import json
 from dharitri_py_sdk import Address, TokenPayment
 from dharitri_py_sdk.core.transaction_builders.transfers_builders import REWATransferBuilder
 from dharitri_py_sdk.core.transaction_builders import DefaultTransactionBuildersConfiguration
-from dharitri_py_sdk_cli import cli_shared
-from dharitri_py_sdk_cli.contract_verification import trigger_contract_verification
+from dharitri_sdk_cli import cli_shared
+from dharitri_sdk_cli.contract_verification import trigger_contract_verification
 from tools.common import API, PROXY
 from utils.utils_chain import Account, WrapperAddress
 from utils.utils_generic import get_file_from_url_or_path, split_to_chunks
