@@ -1,0 +1,296 @@
+{   
+    "token": 
+        {
+            "token_prefix": "E2ETK7",
+            "number_of_tokens": 5
+        },
+
+    "rewa_wraps": [
+        {
+            "unlocked_asset": 1
+        },
+        {
+            "unlocked_asset": 1
+        },
+        {
+            "unlocked_asset": 1
+        }
+    ],
+
+    "locked_assets": [
+        {
+            "unlocked_asset": 0,
+            "locked_asset": "LKMOA",
+            "locked_asset_name": "LockedMOA"
+        }
+    ],
+
+    "simple_locks": [
+        {
+            "locked_token": "LKTK",
+            "locked_token_name": "LockedTK",
+            "locked_lp_token": "LKLPTK",
+            "locked_lp_token_name": "LockedLPTK",
+            "locked_farm_token": "LKFTK",
+            "locked_farm_token_name": "LockedFarmTK"
+        }
+    ],
+
+    "simple_locks_energy": [
+        {
+            "base_token": 0,
+            "locked_token": "XMOA",
+            "locked_token_name": "xMOA",
+            "locked_asset_factory": 0,
+            "min_migrated_lock_epochs": 0,
+            "lock_options": [
+                360, 720, 1440
+            ],
+            "penalties": [
+                5000, 7000, 8000
+            ]
+        }
+    ],
+
+    "fees_collectors": [
+        {
+            "energy_factory": 0,
+            "lock_epochs": 1440,
+            "locked_tokens_per_block": 17500000000000000000000
+        }
+    ],
+
+    "unstakers": [
+        {
+            "energy_factory": 0,
+            "fees_collector": 0,
+            "unbond_epochs": 10,
+            "fees_burn_percentage": 5000
+        }
+    ],
+
+    "proxies": [
+        {
+            "locked_asset": 0,
+            "proxy_lp": "LKLP",
+            "proxy_lp_name": "LockedLP",
+            "proxy_farm": "LKFARM",
+            "proxy_farm_name": "LockedLPStaked"
+        }
+    ],
+
+    "proxies_v2": [
+        {
+            "locked_asset": 0,
+            "energy_factory": 0,
+            "proxy_lp": "XMOALP",
+            "proxy_lp_name": "xMOALP",
+            "proxy_farm": "XMOAFARM",
+            "proxy_farm_name": "xMOALPStaked"
+        }
+    ],
+
+    "router": [
+
+    ],
+
+    "router_v2": [
+        {
+            "empty": 0
+        }
+    ],
+
+    "pairs": [
+
+    ],
+
+    "pairs_v2": [
+        {
+            "launched_token": 1,
+            "accepted_token": 0,
+            "lp_token": "REWAMOA",
+            "lp_token_name": "REWAMOALP",
+            "fee_token": 0,
+            "total_fee": 300,
+            "special_fee": 100,
+            "fees_collector": 0,
+            "fees_collector_cut": 500,
+            "proxy_v2": 0,
+            "liquidity_provider": "drt1u8lpm8ny2kjlgr9e7rfmp3w93d29yjlycth2gnf5k5wza8m7exks2cq9jp"
+        },
+        {
+            "launched_token": 1,
+            "accepted_token": 2,
+            "lp_token": "REWAUSDC",
+            "lp_token_name": "REWAUSDCLP",
+            "fee_token": 1,
+            "total_fee": 300,
+            "special_fee": 100,
+            "fees_collector": 0,
+            "fees_collector_cut": 500,
+            "liquidity_provider": "drt1u8lpm8ny2kjlgr9e7rfmp3w93d29yjlycth2gnf5k5wza8m7exks2cq9jp"
+        },
+        {
+            "launched_token": 1,
+            "accepted_token": 3,
+            "lp_token": "REWARIDE",
+            "lp_token_name": "REWARIDELP",
+            "fee_token": 1,
+            "total_fee": 300,
+            "special_fee": 100,
+            "fees_collector": 0,
+            "fees_collector_cut": 500,
+            "liquidity_provider": "drt1u8lpm8ny2kjlgr9e7rfmp3w93d29yjlycth2gnf5k5wza8m7exks2cq9jp"
+        },
+        {
+            "launched_token": 4,
+            "accepted_token": 1,
+            "lp_token": "UTKWREWA",
+            "lp_token_name": "UTKWREWALP",
+            "fee_token": 1,
+            "total_fee": 300,
+            "special_fee": 100,
+            "fees_collector": 0,
+            "fees_collector_cut": 500,
+            "liquidity_provider": "drt1u8lpm8ny2kjlgr9e7rfmp3w93d29yjlycth2gnf5k5wza8m7exks2cq9jp"
+        }
+    ],
+
+    "pairs_view": [
+        {
+            "empty": 0
+        }
+    ],
+
+    "farms_community": [
+
+    ],
+
+    "farms_unlocked": [
+
+    ],
+
+    "farms_locked": [
+
+    ],
+
+    "proxy_deployers": [
+
+    ],
+
+    "farms_boosted": [
+        {
+            "farming_pool": 0,
+            "farm_token": "REWAMOAFL",
+            "farm_token_name": "REWAMOALPStakedLK",
+            "farmed_token": 0,
+            "rpb": 340000000000000000000000,
+            "penalty": 300,
+            "min_farming_epochs": 7,
+            "lock_factory": 0,
+            "lock_epochs": 1440,
+            "boosted_rewards": 6000,
+            "base_const": 2,
+            "energy_const": 1,
+            "farm_const": 0,
+            "min_energy": 1,
+            "min_farm": 1,
+            "proxy_v2": 0
+        },
+        {
+            "farming_pool": 1,
+            "farm_token": "REWAUSDCFL",
+            "farm_token_name": "REWAUSDCLPStakedLK",
+            "farmed_token": 0,
+            "rpb": 50400000000000000000000,
+            "penalty": 300,
+            "min_farming_epochs": 7,
+            "lock_factory": 0,
+            "lock_epochs": 1440,
+            "boosted_rewards": 6000,
+            "base_const": 2,
+            "energy_const": 1,
+            "farm_const": 0,
+            "min_energy": 1,
+            "min_farm": 1
+        },
+        {
+            "farming_pool": 2,
+            "farm_token": "REWARIDEFL",
+            "farm_token_name": "REWARIDELPStakedLK",
+            "farmed_token": 0,
+            "rpb": 31600000000000000000000,
+            "penalty": 300,
+            "min_farming_epochs": 7,
+            "lock_factory": 0,
+            "lock_epochs": 1440,
+            "boosted_rewards": 6000,
+            "base_const": 2,
+            "energy_const": 1,
+            "farm_const": 0,
+            "min_energy": 1,
+            "min_farm": 1
+        },
+        {
+            "farming_pool": 3,
+            "farm_token": "UTKWREWAFL",
+            "farm_token_name": "UTKWREWALPStakedLK",
+            "farmed_token": 0,
+            "rpb": 21200000000000000000000,
+            "penalty": 300,
+            "min_farming_epochs": 7,
+            "lock_factory": 0,
+            "lock_epochs": 1440,
+            "boosted_rewards": 6000,
+            "base_const": 2,
+            "energy_const": 1,
+            "farm_const": 0,
+            "min_energy": 1,
+            "min_farm": 1
+        }
+    ],
+
+    "price_discoveries": [
+
+    ],
+
+    "stakings": [
+
+    ],
+
+    "stakings_v2": [
+        {
+            "staking_token": 3,
+            "stake_token": "SRIDE",
+            "stake_token_name": "SRIDE",
+            "apr": 2500,
+            "rpb": 4138000000000000000,
+            "unbond_epochs": 10,
+            "rewards": 10000000000000000000000000
+        },
+        {
+            "staking_token": 4,
+            "stake_token": "SUTK",
+            "stake_token_name": "SUTK",
+            "apr": 2500,
+            "rpb": 4138000000000000000,
+            "unbond_epochs": 10,
+            "rewards": 10000000000000000000000000
+        }
+    ],
+
+    "metastakings": [
+
+    ],
+
+    "metastakings_v2": [
+        {
+            "token": 3,
+            "pool_v2": 2,
+            "farm_boosted": 2,
+            "staking_v2": 0,
+            "metastake_token": "METARIDELK",
+            "metastake_token_name": "MetaStakedRideLK"
+        }
+    ]
+}

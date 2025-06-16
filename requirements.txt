@@ -1,0 +1,6 @@
+ipykernel
+toml
+debugpy
+wget
+dharitri-sdk-cli==0.0.2
+dharitri-py-sdk==0.0.2
