@@ -1,4 +1,3 @@
-
 import sys
 import time
 from argparse import ArgumentParser
@@ -6,8 +5,7 @@ from pathlib import Path
 from typing import List
 from dharitri_py_sdk import Address, Transaction, ProxyNetworkProvider
 
-from ported_arrows.stress.contracts.transaction_builder import \
-    transfer_multi_dcdt_and_execute
+from ported_arrows.stress.contracts.transaction_builder import transfer_multi_dcdt_and_execute
 from utils.utils_chain import Account
 from utils.utils_tx import broadcast_transactions
 from utils.utils_chain import BunchOfAccounts
@@ -44,7 +42,9 @@ def main(cli_args: List[str]):
         time.sleep(60 * 1)
 
 
-def create_add_liquidity(pair: Address, caller: Account, token_one: str, token_two: str, network: NetworkConfig) -> Transaction:
+def create_add_liquidity(
+    pair: Address, caller: Account, token_one: str, token_two: str, network: NetworkConfig
+) -> Transaction:
     given_one = 100000
     given_two = 100000
     transfers = [(token_one, given_one), (token_two, given_two)]

@@ -23,8 +23,8 @@ def get_shard_of_address(address: Address) -> int:
 def is_address_of_metachain(address: Address):
     pub_key = address.get_public_key()
 
-    metachain_prefix = bytearray([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    pub_key_prefix = pub_key[0:len(metachain_prefix)]
+    metachain_prefix = bytearray([35, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 51, 48, 0, 0, 0, 0, 0])
+    pub_key_prefix = pub_key[0 : len(metachain_prefix)]
     if bytearray(pub_key_prefix) == metachain_prefix:
         return True
 

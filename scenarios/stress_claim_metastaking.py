@@ -8,17 +8,27 @@ from utils.utils_tx import broadcast_transactions
 from dharitri_py_sdk.network_providers.network_config import NetworkConfig
 
 
-def claim_metastaking_rewards(caller: Account, contract_addr: Address, number_of_tokens: int, token_identifier: str,
-                              token_nonce: str, token_quantity: int, network: NetworkConfig, method: str) -> Transaction:
+def claim_metastaking_rewards(
+    caller: Account,
+    contract_addr: Address,
+    number_of_tokens: int,
+    token_identifier: str,
+    token_nonce: str,
+    token_quantity: int,
+    network: NetworkConfig,
+    method: str,
+) -> Transaction:
 
-    tx_data = f'MultiDCDTNFTTransfer@{contract_addr.to_hex()}@{number_as_arg(number_of_tokens)}@{string_as_arg(token_identifier)}' \
-              f'@{token_nonce}@{number_as_arg(token_quantity)}@{string_as_arg(method)}'
+    tx_data = (
+        f"MultiDCDTNFTTransfer@{contract_addr.to_hex()}@{number_as_arg(number_of_tokens)}@{string_as_arg(token_identifier)}"
+        f"@{token_nonce}@{number_as_arg(token_quantity)}@{string_as_arg(method)}"
+    )
 
     transaction = Transaction(
         chain_id=network.chain_id,
         sender=caller.address.to_bech32(),
         receiver=caller.address.to_bech32(),
-        gas_limit=40000000
+        gas_limit=40000000,
     )
     transaction.nonce = caller.nonce
     transaction.value = 0
@@ -38,7 +48,7 @@ def main(cli_args: List[str]):
     parser.add_argument("--account", required=True)
     parser.add_argument("--token", required=True)
     parser.add_argument("--token-nonce", required=True)
-    parser.add_argument('--contract-address', required=True)
+    parser.add_argument("--contract-address", required=True)
     args = parser.parse_args(cli_args)
 
     proxy = ProxyNetworkProvider(args.proxy)
@@ -48,13 +58,14 @@ def main(cli_args: List[str]):
     token_identifier = args.token
     token_nonce = args.token_nonce
     token_quantity = 1000
-    method = 'claimDualYield'
+    method = "claimDualYield"
     contract_address = Address(args.contract_address, "drt")
 
     txs = []
     for _ in range(5):
-        tx = claim_metastaking_rewards(account, contract_address, 1, token_identifier, token_nonce, token_quantity,
-                                       network, method)
+        tx = claim_metastaking_rewards(
+            account, contract_address, 1, token_identifier, token_nonce, token_quantity, network, method
+        )
 
         txs.append(tx)
         account.nonce += 1
@@ -62,5 +73,5 @@ def main(cli_args: List[str]):
     broadcast_transactions(txs, proxy, 5, confirm_yes=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1:])

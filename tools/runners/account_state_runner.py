@@ -2,8 +2,9 @@ import json
 import os
 from argparse import ArgumentParser
 from typing import Dict, Any, Tuple
-from dharitri_py_sdk import ProxyNetworkProvider
-from dharitri_py_sdk.network_providers import errors
+from dharitri_py_sdk import ProxyNetworkProvider, NetworkProviderConfig
+from dharitri_py_sdk.network_providers.errors import NetworkProviderError
+from utils.errors import GenericError
 import requests
 from utils.utils_generic import log_step_fail, log_step_pass, log_warning, get_continue_confirmation
 from utils.logger import get_logger
@@ -21,7 +22,9 @@ def add_parsed_arguments(parser: ArgumentParser):
     parser.add_argument("--verbose", action="store_true", default=False)
 
 
-def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0, with_save_in: str = "") -> Dict[str, Any]:
+def get_account_keys_online(
+    address: str, proxy_url: str, block_number: int = 0, with_save_in: str = ""
+) -> Dict[str, Any]:
     """Get account keys from chain"""
 
     if block_number == 0:
@@ -29,14 +32,15 @@ def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0,
     else:
         resource_url = f"address/{address}/keys?blockNonce={block_number}"
 
-    proxy = ProxyNetworkProvider(proxy_url)
+    network_config = NetworkProviderConfig(requests_options={"timeout": 60})
+    proxy = ProxyNetworkProvider(proxy_url, config=network_config)
     response = {}
 
     while True:
         try:
             response = proxy.do_get_generic(resource_url)
             break
-        except (requests.exceptions.RequestException, errors.GenericError) as e:
+        except (requests.exceptions.RequestException, GenericError, NetworkProviderError) as e:
             log_step_fail(f"Exception occurred while retrieving keys: {e}")
             if input("Do you want to retry? (y/n): ").lower() != "y":
                 break
@@ -48,11 +52,43 @@ def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0,
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
 
-        with open(with_save_in, 'w', encoding="UTF-8") as state_writer:
+        with open(with_save_in, "w", encoding="UTF-8") as state_writer:
             json.dump(keys, state_writer, indent=4)
-            logger.info(f'Dumped the retrieved contact state in: {with_save_in}')
+            logger.info(f"Dumped the retrieved account state in: {with_save_in}")
 
     return keys
+
+
+def get_account_data_online(
+    address: str, proxy_url: str, block_number: int = 0, with_save_in: str = ""
+) -> Dict[str, Any]:
+    """Get account data from chain"""
+
+    if block_number == 0:
+        resource_url = f"address/{address}"
+    else:
+        resource_url = f"address/{address}?blockNonce={block_number}"
+
+    proxy = ProxyNetworkProvider(proxy_url)
+    response = {}
+
+    try:
+        response = proxy.do_get_generic(resource_url)
+    except (requests.exceptions.RequestException, GenericError, NetworkProviderError) as e:
+        log_step_fail(f"Exception occurred while retrieving data: {e}")
+
+    data = response.get("account", {})
+
+    if data and with_save_in:
+        dir_path = os.path.dirname(with_save_in)
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
+
+        with open(with_save_in, "w", encoding="UTF-8") as state_writer:
+            json.dump(data, state_writer, indent=4)
+            logger.info(f"Dumped the retrieved account data in: {with_save_in}")
+
+    return data
 
 
 def compare_keys(left_state: dict, right_state: dict) -> Tuple[bool, dict, dict, dict, dict]:
@@ -103,7 +139,7 @@ def report_key_files_compare(folder_path: str, left_prefix: str, right_prefix: s
         if f"{left_prefix}" not in file:
             continue
 
-        sub_name = file[len(left_prefix):]
+        sub_name = file[len(left_prefix) :]
         right_file = f"{right_prefix}{sub_name}"
         if not os.path.exists(os.path.join(folder_path, right_file)):
             continue
@@ -113,8 +149,7 @@ def report_key_files_compare(folder_path: str, left_prefix: str, right_prefix: s
         with open(os.path.join(folder_path, right_file), encoding="UTF-8") as reader:
             right_state = json.load(reader)
 
-        identical, keys_in_left, keys_in_right, common_keys_diff_values, _ = compare_keys(left_state,
-                                                                                          right_state)
+        identical, keys_in_left, keys_in_right, common_keys_diff_values, _ = compare_keys(left_state, right_state)
 
         if identical:
             log_step_pass(f"\n{file} and {right_file} are identical.")

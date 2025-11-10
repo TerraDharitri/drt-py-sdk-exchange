@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 class PositionCreatorContract(DEXContractInterface):
     """
-        PositionCreatorContract class
+    PositionCreatorContract class
     """
 
     def __init__(self, address: str = "", rewa_wrapper_address: str = "", router_address: str = ""):
@@ -24,30 +24,25 @@ class PositionCreatorContract(DEXContractInterface):
         self.router_address = router_address
 
     def get_config_dict(self) -> dict:
-        output_dict = {
-            "address": self.address
-        }
+        output_dict = {"address": self.address}
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return PositionCreatorContract(address=config_dict['address'])
+        return PositionCreatorContract(address=config_dict["address"])
+
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
         return PositionCreatorContract(address)
 
-    def contract_deploy(
-            self,
-            deployer: Account,
-            proxy: ProxyNetworkProvider,
-            bytecode_path,
-            args: list
-    ):
+    def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
         """
-            Expecting as args:
-                type[str]: rewa wrapper address
-                type[str]: router address
+        Expecting as args:
+            type[str]: rewa wrapper address
+            type[str]: router address
         """
         function_purpose = f"deploy {type(self).__name__} contract"
         logger.info(function_purpose)
@@ -55,21 +50,13 @@ class PositionCreatorContract(DEXContractInterface):
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
         gas_limit = 200000000
 
-        tx_hash, address = deploy(
-            type(self).__name__,
-            proxy,
-            gas_limit,
-            deployer,
-            bytecode_path,
-            metadata,
-            args
-        )
+        tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, args)
 
         return tx_hash, address
 
     def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path):
         """
-            Expecting as args:
+        Expecting as args:
         """
 
         function_purpose = "Upgrade position creator contract"
@@ -79,14 +66,7 @@ class PositionCreatorContract(DEXContractInterface):
         gas_limit = 200000000
 
         tx_hash = upgrade_call(
-            type(self).__name__,
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            bytecode_path,
-            metadata,
-            []
+            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, []
         )
 
         return tx_hash

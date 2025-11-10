@@ -2,6 +2,7 @@ import random
 from datetime import datetime
 
 import config
+from contracts.contract_identities import DEXContractInterface
 from contracts.farm_contract import FarmContract
 from contracts.metastaking_contract import MetaStakingContract
 from contracts.pair_contract import PairContract
@@ -14,6 +15,9 @@ from trackers.staking_economics_tracking import StakingEconomics
 from trackers.metastaking_economics_tracking import MetastakingEconomics
 from trackers.concrete_observer import Observable
 from utils.utils_chain import Account, BunchOfAccounts, WrapperAddress as Address
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Context:
@@ -26,11 +30,11 @@ class Context:
 
         if "shadowfork" in config.DEFAULT_PROXY and config.SF_DEX_REFERENCE_ADDRESS:
             # get owner of the SF reference contract
-            owner = self.network_provider.proxy.get_account(Address(config.SF_DEX_REFERENCE_ADDRESS)).owner_address.to_bech32()
+            owner = self.network_provider.proxy.get_account(Address(config.SF_DEX_REFERENCE_ADDRESS)).contract_owner_address.to_bech32()
             print(f"Shadowfork detected. Owner: {owner}")
 
-            config.DEX_OWNER_ADDRESS = owner
-            config.DEX_ADMIN_ADDRESS = owner
+            config.DEX_OWNER_ADDRESS = owner if not config.DEX_OWNER_ADDRESS else config.DEX_OWNER_ADDRESS
+            config.DEX_ADMIN_ADDRESS = owner if not config.DEX_ADMIN_ADDRESS else config.DEX_ADMIN_ADDRESS
 
         if config.DEX_OWNER_ADDRESS:    # manual override only for shadowforks
             self.deployer_account.address = Address(config.DEX_OWNER_ADDRESS)
@@ -83,6 +87,9 @@ class Context:
 
         self.observable = Observable()
         # self.init_observers()     # call should be parameterized so that observers can be disabled programmatically
+
+        logger.info(f"Using proxy: {self.network_provider.proxy.url}")
+        logger.info(f"Using owner: {self.deployer_account.address.bech32()}")
 
     def init_observers(self):
 
@@ -163,7 +170,7 @@ class Context:
     def get_price_discovery_contract(self, index: int):
         return self.deploy_structure.get_deployed_contract_by_index(config.PRICE_DISCOVERIES, index)
 
-    def get_contracts(self, contract_label: str):
+    def get_contracts(self, contract_label: str) -> list[DEXContractInterface]:
         return self.deploy_structure.get_deployed_contracts(contract_label)
 
     def get_farm_contract_by_address(self, address: str) -> FarmContract:

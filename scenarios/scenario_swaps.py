@@ -55,14 +55,18 @@ def send_tokens(context: Context):
 
     for token in context.deploy_structure.tokens:
         print(f"Funding each account with {tk_amount} {token} tokens.")
-        args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
-                f'--minter={minter}', f'--token={token}', f'--amount-atoms={tk_amount}']
+        args = [
+            f"--proxy={proxy_url}",
+            f"--accounts={accounts}",
+            f"--minter={minter}",
+            f"--token={token}",
+            f"--amount-atoms={tk_amount}",
+        ]
         send_token_from_minter(args)
         time.sleep(7)
 
-    print(f"Funding each account with {rewa_amount} rEWA tokens.")
-    args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
-            f'--minter={minter}', f'--value-atoms={rewa_amount}']
+    print(f"Funding each account with {rewa_amount} REWA tokens.")
+    args = [f"--proxy={proxy_url}", f"--accounts={accounts}", f"--minter={minter}", f"--value-atoms={rewa_amount}"]
     send_rewa_from_minter(args)
     time.sleep(7)
 
@@ -71,12 +75,18 @@ def add_initial_liquidity(context: Context):
     # add initial liquidity
     pair_contract: PairContract
     for pair_contract in context.get_contracts(config.PAIRS):
-        pair_data_fetcher = PairContractDataFetcher(Address.new_from_bech32(pair_contract.address), context.network_provider.proxy.url)
+        pair_data_fetcher = PairContractDataFetcher(
+            Address.new_from_bech32(pair_contract.address), context.network_provider.proxy.url
+        )
         first_token_liquidity = pair_data_fetcher.get_token_reserve(pair_contract.firstToken)
         if first_token_liquidity == 0:
             event = AddLiquidityEvent(
-                pair_contract.firstToken, nominated_amount(1000000), 1,
-                pair_contract.secondToken, nominated_amount(1000000), 1
+                pair_contract.firstToken,
+                nominated_amount(1000000),
+                1,
+                pair_contract.secondToken,
+                nominated_amount(1000000),
+                1,
             )
             pair_contract.add_liquidity(context.network_provider, context.deployer_account, event)
             time.sleep(6)
@@ -96,12 +106,11 @@ def scenarios(context: Context, threads: int, repeats: int):
         for _ in range(repeats if repeats != 0 else 99999999):
             scenarios_per_account(context, random.choice(accounts))
     elif threads > 1:
-        """ Concurential run """
+        """Concurential run"""
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             jobs = min(threads, repeats) if repeats != 0 else threads
             finished_jobs = 0
-            futures = [executor.submit(scenarios_per_account, context, random.choice(accounts))
-                       for _ in range(jobs)]
+            futures = [executor.submit(scenarios_per_account, context, random.choice(accounts)) for _ in range(jobs)]
 
             # feed the thread workers as they complete each job
             while finished_jobs < repeats or repeats == 0:
@@ -126,8 +135,7 @@ def scenarios_per_account(context: Context, account: Account):
     min_time = 10
     max_time = 30
     deployer_shard = get_shard_of_address(context.deployer_account.address)
-    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard \
-        else 6
+    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard else 6
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -139,7 +147,7 @@ def scenarios_per_account(context: Context, account: Account):
     time.sleep(sleep_time)
 
     wait_time = random.randint(min_time, max_time)
-    print(f'Finished repeat execution. Waiting for {wait_time}s.')
+    print(f"Finished repeat execution. Waiting for {wait_time}s.")
     time.sleep(wait_time)
 
 

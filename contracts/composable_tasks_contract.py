@@ -13,22 +13,22 @@ class ComposableTasksContract(DEXContractInterface):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {
-            "address": self.address
-        }
+        output_dict = {"address": self.address}
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return ComposableTasksContract(address=config_dict['address'])
+        return ComposableTasksContract(address=config_dict["address"])
+
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
         raise NotImplementedError
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None):
-        """Expecting as args:
-        """
+        """Expecting as args:"""
         function_purpose = "Deploy composable tasks contract"
         logger.info(function_purpose)
 
@@ -39,8 +39,7 @@ class ComposableTasksContract(DEXContractInterface):
         return tx_hash, address
 
     def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path):
-        """Expecting as args:
-        """
+        """Expecting as args:"""
         function_purpose = f"Upgrade composable tasks contract"
         logger.info(function_purpose)
 
@@ -48,8 +47,9 @@ class ComposableTasksContract(DEXContractInterface):
 
         gas_limit = 200000000
 
-        return upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
-                            bytecode_path, metadata, [])
+        return upgrade_call(
+            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, []
+        )
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = None):
         pass
@@ -58,8 +58,8 @@ class ComposableTasksContract(DEXContractInterface):
         log_step_pass(f"Deployed composable tasks contract: {self.address}")
 
     def set_wrap_rewa_address(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
-            Type[str]: wrap rewa address
+        """Expected as args:
+        Type[str]: wrap rewa address
         """
 
         function_purpose = "Set wrap rewa address"
@@ -68,8 +68,8 @@ class ComposableTasksContract(DEXContractInterface):
         return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setWrapRewaAddr", args)
 
     def set_router_address(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
-            Type[str]: router address
+        """Expected as args:
+        Type[str]: router address
         """
 
         function_purpose = "Set router address"
@@ -77,4 +77,22 @@ class ComposableTasksContract(DEXContractInterface):
 
         return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setRouterAddr", args)
 
+    def set_smart_swap_fee(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
+        """Expected as args:
+        Type[number]: fee percentage
+        """
 
+        function_purpose = "Set smart swap fees"
+        logger.info(function_purpose)
+
+        return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setSmartSwapFeePercentage", args)
+
+    def withdraw_smart_swap_fees(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
+        """Expected as args:
+        Type[string]: tokens identifiers
+        """
+
+        function_purpose = "Withdraw smart swap fees"
+        logger.info(function_purpose)
+
+        return endpoint_call(proxy, 10000000, deployer, Address(self.address), "withdrawSmartSwapFees", args)

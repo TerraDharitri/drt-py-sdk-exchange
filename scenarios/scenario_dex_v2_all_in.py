@@ -12,16 +12,23 @@ from context import Context
 from contracts.fees_collector_contract import FeesCollectorContract
 from contracts.pair_contract import PairContract, AddLiquidityEvent
 from contracts.simple_lock_energy_contract import SimpleLockEnergyContract
-from events.event_generators import (generate_add_initial_liquidity_event,
-                                                       generate_add_liquidity_event,
-                                                       generateEnterFarmEvent,
-                                                       generateEnterMetastakeEvent,
-                                                       generateClaimMetastakeRewardsEvent,
-                                                       generateExitMetastakeEvent, generate_swap_fixed_input)
+from events.event_generators import (
+    generate_add_initial_liquidity_event,
+    generate_add_liquidity_event,
+    generateEnterFarmEvent,
+    generateEnterMetastakeEvent,
+    generateClaimMetastakeRewardsEvent,
+    generateExitMetastakeEvent,
+    generate_swap_fixed_input,
+)
 from utils.contract_data_fetchers import PairContractDataFetcher, SimpleLockEnergyContractDataFetcher
 from utils.utils_tx import DCDTToken
-from utils.utils_chain import Account, nominated_amount, \
-    get_token_details_for_address, get_all_token_nonces_details_for_account
+from utils.utils_chain import (
+    Account,
+    nominated_amount,
+    get_token_details_for_address,
+    get_all_token_nonces_details_for_account,
+)
 from utils.utils_generic import log_step_fail, log_step_pass, log_condition_assert, TestStepConditions
 from ported_arrows.stress.send_token_from_minter import main as send_token_from_minter
 from ported_arrows.stress.send_rewa_from_minter import main as send_rewa_from_minter
@@ -64,14 +71,18 @@ def send_tokens(context: Context):
 
     for token in context.deploy_structure.tokens:
         print(f"Funding each account with {tk_amount} {token} tokens.")
-        args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
-                f'--minter={minter}', f'--token={token}', f'--amount-atoms={tk_amount}']
+        args = [
+            f"--proxy={proxy_url}",
+            f"--accounts={accounts}",
+            f"--minter={minter}",
+            f"--token={token}",
+            f"--amount-atoms={tk_amount}",
+        ]
         send_token_from_minter(args)
         time.sleep(7)
 
-    print(f"Funding each account with {rewa_amount} rEWA tokens.")
-    args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
-            f'--minter={minter}', f'--value-atoms={rewa_amount}']
+    print(f"Funding each account with {rewa_amount} REWA tokens.")
+    args = [f"--proxy={proxy_url}", f"--accounts={accounts}", f"--minter={minter}", f"--value-atoms={rewa_amount}"]
     send_rewa_from_minter(args)
     time.sleep(7)
 
@@ -80,12 +91,18 @@ def add_initial_liquidity(context: Context):
     # add initial liquidity
     pair_contract: PairContract
     for pair_contract in context.get_contracts(config.PAIRS_V2):
-        pair_data_fetcher = PairContractDataFetcher(Address(pair_contract.address, "drt"), context.network_provider.proxy.url)
+        pair_data_fetcher = PairContractDataFetcher(
+            Address(pair_contract.address, "drt"), context.network_provider.proxy.url
+        )
         first_token_liquidity = pair_data_fetcher.get_token_reserve(pair_contract.firstToken)
         if first_token_liquidity == 0:
             event = AddLiquidityEvent(
-                pair_contract.firstToken, nominated_amount(1000000), 1,
-                pair_contract.secondToken, nominated_amount(1000000), 1
+                pair_contract.firstToken,
+                nominated_amount(1000000),
+                1,
+                pair_contract.secondToken,
+                nominated_amount(1000000),
+                1,
             )
             pair_contract.add_liquidity(context.network_provider, context.deployer_account, event)
             time.sleep(6)
@@ -105,12 +122,11 @@ def scenarios(context: Context, threads: int, repeats: int):
         for _ in range(repeats if repeats != 0 else 99999999):
             scenarios_per_account(context, random.choice(accounts))
     elif threads > 1:
-        """ Concurential run """
+        """Concurential run"""
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             jobs = min(threads, repeats) if repeats != 0 else threads
             finished_jobs = 0
-            futures = [executor.submit(scenarios_per_account, context, random.choice(accounts))
-                       for _ in range(jobs)]
+            futures = [executor.submit(scenarios_per_account, context, random.choice(accounts)) for _ in range(jobs)]
 
             # feed the thread workers as they complete each job
             while finished_jobs < repeats or repeats == 0:
@@ -135,8 +151,7 @@ def scenarios_per_account(context: Context, account: Account):
     min_time = 10
     max_time = 30
     deployer_shard = context.deployer_account.address.get_shard()
-    sleep_time = config.CROSS_SHARD_DELAY if account.address.get_shard() is not deployer_shard \
-        else 6
+    sleep_time = config.CROSS_SHARD_DELAY if account.address.get_shard() is not deployer_shard else 6
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -151,7 +166,7 @@ def scenarios_per_account(context: Context, account: Account):
     lock_options = simple_lock_energy_contract.get_lock_options(context.network_provider.proxy)
     lock_periods = []
     for entry in lock_options:
-        lock_periods.append(entry['lock_epochs'])
+        lock_periods.append(entry["lock_epochs"])
 
     # lock tokens
     amount = random.randint(1, 10)
@@ -169,15 +184,13 @@ def scenarios_per_account(context: Context, account: Account):
 
     # unlock tokens early - 20% chance
     if random.randint(0, 100) <= 20:
-        user_tokens = get_all_token_nonces_details_for_account(simple_lock_energy_contract.locked_token,
-                                                               account.address.bech32(),
-                                                               context.network_provider.proxy)
-        if len(user_tokens) > 0:    # if user has locked tokens, unlock some from one of them
+        user_tokens = get_all_token_nonces_details_for_account(
+            simple_lock_energy_contract.locked_token, account.address.bech32(), context.network_provider.proxy
+        )
+        if len(user_tokens) > 0:  # if user has locked tokens, unlock some from one of them
             token_to_unlock = random.choice(user_tokens)
-            amount = random.randint(1, int(token_to_unlock['balance']))
-            token = DCDTToken(simple_lock_energy_contract.locked_token,
-                              token_to_unlock['nonce'],
-                              amount)
+            amount = random.randint(1, int(token_to_unlock["balance"]))
+            token = DCDTToken(simple_lock_energy_contract.locked_token, token_to_unlock["nonce"], amount)
             _ = simple_lock_energy_contract.unlock_early(account, context.network_provider.proxy, [[token]])
             print(f"User: {account.address.bech32()}")
             print(f"Unlocked {amount} tokens {token.get_full_token_name()}")
@@ -190,7 +203,7 @@ def scenarios_per_account(context: Context, account: Account):
         time.sleep(sleep_time)
 
     wait_time = random.randint(min_time, max_time)
-    print(f'Finished repeat execution. Waiting for {wait_time}s.')
+    print(f"Finished repeat execution. Waiting for {wait_time}s.")
     time.sleep(wait_time)
 
 

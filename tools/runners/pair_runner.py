@@ -1,15 +1,24 @@
 from argparse import ArgumentParser
 from typing import Any
 from dharitri_py_sdk import Address
-from common import fetch_and_save_contracts, get_saved_contract_addresses
 from context import Context
 from contracts.contract_identities import PairContractVersion, RouterContractVersion
 from contracts.fees_collector_contract import FeesCollectorContract
 from contracts.pair_contract import PairContract
 from contracts.router_contract import RouterContract
-from tools.common import API, OUTPUT_FOLDER, OUTPUT_PAUSE_STATES, PROXY, \
-    fetch_contracts_states, fetch_new_and_compare_contract_states, get_owner, \
-    get_user_continue, run_graphql_query
+from tools.common import (
+    API,
+    OUTPUT_FOLDER,
+    OUTPUT_PAUSE_STATES,
+    PROXY,
+    fetch_contracts_states,
+    fetch_new_and_compare_contract_states,
+    get_owner,
+    get_user_continue,
+    run_graphql_query,
+    fetch_and_save_contracts,
+    get_saved_contract_addresses,
+)
 from tools.runners.common_runner import add_upgrade_all_command
 from utils.contract_data_fetchers import PairContractDataFetcher, RouterContractDataFetcher
 from utils.utils_tx import NetworkProviders
@@ -25,30 +34,32 @@ OUTPUT_PAIR_CONTRACTS_FILE = OUTPUT_FOLDER / "pairs_data.json"
 
 def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     """Set up argument parser for pair commands"""
-    group_parser = subparsers.add_parser('pairs', help='pairs group commands')
+    group_parser = subparsers.add_parser("pairs", help="pairs group commands")
     subgroup_parser = group_parser.add_subparsers()
 
-    contract_parser = subgroup_parser.add_parser('contract', help='pairs contract commands')
+    contract_parser = subgroup_parser.add_parser("contract", help="pairs contract commands")
 
     contract_group = contract_parser.add_subparsers()
     add_upgrade_all_command(contract_group, upgrade_pair_contracts)
 
-    command_parser = contract_group.add_parser('fetch-all', help='fetch all contracts command')
+    command_parser = contract_group.add_parser("fetch-all", help="fetch all contracts command")
     command_parser.set_defaults(func=fetch_and_save_pairs_from_chain)
 
-    command_parser = contract_group.add_parser('pause-all', help='pause all contracts command')
+    command_parser = contract_group.add_parser("pause-all", help="pause all contracts command")
     command_parser.set_defaults(func=pause_pair_contracts)
 
-    command_parser = contract_group.add_parser('resume-all', help='resume all contracts command')
+    command_parser = contract_group.add_parser("resume-all", help="resume all contracts command")
     command_parser.set_defaults(func=resume_pair_contracts)
 
-    command_parser = contract_group.add_parser('set-fees-collector', help='set fees collector in all contracts command')
+    command_parser = contract_group.add_parser("set-fees-collector", help="set fees collector in all contracts command")
     command_parser.set_defaults(func=set_fees_collector_in_pairs)
 
-    command_parser = contract_group.add_parser('remove-from-fees-collector', help='remove fees collector from all contracts command')
+    command_parser = contract_group.add_parser(
+        "remove-from-fees-collector", help="remove fees collector from all contracts command"
+    )
     command_parser.set_defaults(func=remove_pairs_from_fees_collector)
 
-    command_parser = contract_group.add_parser('update-fees', help='update fees percentage in all contracts command')
+    command_parser = contract_group.add_parser("update-fees", help="update fees percentage in all contracts command")
     command_parser.set_defaults(func=update_fees_percentage)
 
     return group_parser
@@ -57,7 +68,7 @@ def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
 def fetch_and_save_pairs_from_chain(_):
     """Fetch and save pairs from chain"""
 
-    print('fetch_and_save_pairs_from_chain')
+    print("fetch_and_save_pairs_from_chain")
 
     context = Context()
     router_address = context.get_contracts(config.ROUTER_V2)[0].address
@@ -108,8 +119,7 @@ def resume_pair_contracts(_):
     router_address = context.get_contracts(config.ROUTER_V2)[0].address
 
     if not os.path.exists(OUTPUT_PAUSE_STATES):
-        print("Contract initial states not found!"
-              "Cannot proceed safely without altering initial state.")
+        print("Contract initial states not found!" "Cannot proceed safely without altering initial state.")
 
     with open(OUTPUT_PAUSE_STATES, encoding="UTF-8") as reader:
         contract_states = json.load(reader)
@@ -133,12 +143,15 @@ def resume_pair_contracts(_):
         elif contract_states[pair_address] == 2:
             pair_contract = PairContract("", "", PairContractVersion.V2, address=pair_address)
             tx_hash = pair_contract.set_active_no_swaps(dex_owner, network_providers.proxy)
-            if not network_providers.check_simple_tx_status(tx_hash, f"set active no swaps on pair contract: {pair_address}"):
+            if not network_providers.check_simple_tx_status(
+                tx_hash, f"set active no swaps on pair contract: {pair_address}"
+            ):
                 if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
                     return
         else:
-            print(f"Contract {pair_address} wasn't touched" \
-                  " because of initial state: {contract_states[pair_address]}")
+            print(
+                f"Contract {pair_address} wasn't touched" " because of initial state: {contract_states[pair_address]}"
+            )
 
         count += 1
 
@@ -163,14 +176,15 @@ def upgrade_pair_contracts(args: Any):
     for pair_address in pair_addresses:
         print(f"Processing contract {count} / {len(pair_addresses)}: {pair_address}")
         pair_contract = PairContract.load_contract_by_address(pair_address)
-        pair_data_fetcher = PairContractDataFetcher(Address.new_from_bech32(pair_address),
-                                                    network_providers.proxy.url)
+        pair_data_fetcher = PairContractDataFetcher(Address.new_from_bech32(pair_address), network_providers.proxy.url)
         total_fee_percentage = pair_data_fetcher.get_data("getTotalFeePercent")
         special_fee_percentage = pair_data_fetcher.get_data("getSpecialFee")
         existent_initial_liquidity_adder = pair_data_fetcher.get_data("getInitialLiquidtyAdder")
-        initial_liquidity_adder = \
-            Address.new_from_bech32(existent_initial_liquidity_adder[2:]).to_bech32() \
-            if existent_initial_liquidity_adder else config.ZERO_CONTRACT_ADDRESS
+        initial_liquidity_adder = (
+            Address.new_from_bech32(existent_initial_liquidity_adder[2:]).to_bech32()
+            if existent_initial_liquidity_adder
+            else config.ZERO_CONTRACT_ADDRESS
+        )
         print(f"Initial liquidity adder: {initial_liquidity_adder}")
 
         if compare_states:
@@ -181,9 +195,12 @@ def upgrade_pair_contracts(args: Any):
                 return
 
         pair_contract.version = PairContractVersion.V2
-        tx_hash = pair_contract.contract_upgrade_via_router(dex_owner, network_providers.proxy, router_contract,
-                                                            [total_fee_percentage, special_fee_percentage,
-                                                             initial_liquidity_adder])
+        tx_hash = pair_contract.contract_upgrade_via_router(
+            dex_owner,
+            network_providers.proxy,
+            router_contract,
+            [total_fee_percentage, special_fee_percentage, initial_liquidity_adder],
+        )
 
         if not network_providers.check_simple_tx_status(tx_hash, f"upgrade pair contract: {pair_address}"):
             if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
@@ -220,8 +237,9 @@ def set_fees_collector_in_pairs(_):
         fees_cut = 50000
 
         # setup fees collector in pair
-        tx_hash = pair_contract.add_fees_collector(dex_owner, network_providers.proxy,
-                                                   [fees_collector.address, fees_cut])
+        tx_hash = pair_contract.add_fees_collector(
+            dex_owner, network_providers.proxy, [fees_collector.address, fees_cut]
+        )
         _ = network_providers.check_simple_tx_status(tx_hash, "set fees collector in pair")
 
         if not get_user_continue():
@@ -260,11 +278,9 @@ def remove_pairs_from_fees_collector(_):
         pair_contract = PairContract.load_contract_by_address(pair_address)
 
         removable_addresses.append(pair_address)
-        if pair_contract.firstToken not in whitelisted_tokens and \
-           pair_contract.firstToken not in removable_tokens:
+        if pair_contract.firstToken not in whitelisted_tokens and pair_contract.firstToken not in removable_tokens:
             removable_tokens.append(pair_contract.firstToken)
-        if pair_contract.secondToken not in whitelisted_tokens and \
-           pair_contract.secondToken not in removable_tokens:
+        if pair_contract.secondToken not in whitelisted_tokens and pair_contract.secondToken not in removable_tokens:
             removable_tokens.append(pair_contract.secondToken)
 
     print(f"Will remove {len(removable_addresses)} pairs from fees collector.")
@@ -277,8 +293,7 @@ def remove_pairs_from_fees_collector(_):
     # remove pair address in fees collector
     for address in removable_addresses:
         print(f"Processing contract {count} / {len(removable_addresses)}")
-        tx_hash = fees_collector.remove_known_contracts(dex_owner,
-                                                        network_providers.proxy, [address])
+        tx_hash = fees_collector.remove_known_contracts(dex_owner, network_providers.proxy, [address])
         if not network_providers.check_simple_tx_status(tx_hash, "remove pair addresses"):
             if not get_user_continue():
                 return
@@ -288,8 +303,7 @@ def remove_pairs_from_fees_collector(_):
     # remove token in fees collector
     for token in removable_tokens:
         print(f"Processing token {count} / {len(removable_tokens)}")
-        tx_hash = fees_collector.remove_known_tokens(dex_owner,
-                                                     network_providers.proxy, [f"str:{token}"])
+        tx_hash = fees_collector.remove_known_tokens(dex_owner, network_providers.proxy, [f"str:{token}"])
         if not network_providers.check_simple_tx_status(tx_hash, "remove token"):
             if not get_user_continue():
                 return
@@ -313,14 +327,14 @@ def update_fees_percentage(_):
     for pair_address in pair_addresses:
         print(f"Processing contract {count} / {len(pair_addresses)}: {pair_address}")
         pair_contract = PairContract.load_contract_by_address(pair_address)
-        pair_data_fetcher = PairContractDataFetcher(Address.new_from_bech32(pair_address),
-                                                    network_providers.proxy.url)
+        pair_data_fetcher = PairContractDataFetcher(Address.new_from_bech32(pair_address), network_providers.proxy.url)
         total_fee_percentage = pair_data_fetcher.get_data("getTotalFeePercent")
         special_fee_percentage = 100
 
         pair_contract.version = PairContractVersion.V2
-        tx_hash = pair_contract.set_fees_percents(dex_owner, network_providers.proxy,
-                                                  [total_fee_percentage, special_fee_percentage])
+        tx_hash = pair_contract.set_fees_percents(
+            dex_owner, network_providers.proxy, [total_fee_percentage, special_fee_percentage]
+        )
 
         if not network_providers.check_complex_tx_status(tx_hash, f"set fees percentages: {pair_address}"):
             if not get_user_continue():
@@ -343,9 +357,9 @@ def deploy_pair_view():
 
     pair_view_contract = PairContract("", "", PairContractVersion.V1)
 
-    tx_hash, address = pair_view_contract.view_contract_deploy(dex_owner, network_providers.proxy,
-                                                               config.PAIR_VIEW_BYTECODE_PATH,
-                                                               [config.ZERO_CONTRACT_ADDRESS])
+    tx_hash, address = pair_view_contract.view_contract_deploy(
+        dex_owner, network_providers.proxy, config.PAIR_VIEW_BYTECODE_PATH, [config.ZERO_CONTRACT_ADDRESS]
+    )
 
     if not network_providers.check_complex_tx_status(tx_hash, f"deploy view contract: {address}"):
         if not get_user_continue():
@@ -358,8 +372,7 @@ def get_depositing_addresses() -> list:
     pair_addresses = get_pairs_for_fees_addresses()
 
     if not os.path.exists(OUTPUT_PAUSE_STATES):
-        print("Contract initial states not found!"
-              "Cannot proceed due to risk of whitelisting inactive pairs.")
+        print("Contract initial states not found!" "Cannot proceed due to risk of whitelisting inactive pairs.")
         return []
 
     with open(OUTPUT_PAUSE_STATES, encoding="UTF-8") as reader:
@@ -398,12 +411,12 @@ def get_pairs_for_fees_addresses() -> list:
             """
 
     result = run_graphql_query(config.GRAPHQL, query)
-    pairs = result['data']['pairs']
+    pairs = result["data"]["pairs"]
     sorted_pairs = []
 
     for entry in pairs:
-        if entry['type'] == 'Core' or entry['type'] == 'Ecosystem':
-            sorted_pairs.append(entry['address'])
+        if entry["type"] == "Core" or entry["type"] == "Ecosystem":
+            sorted_pairs.append(entry["address"])
 
     return sorted_pairs
 

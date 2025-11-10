@@ -1,8 +1,14 @@
 from argparse import ArgumentParser
 from typing import Any
-from tools.common import API, OUTPUT_FOLDER, PROXY, \
-    fetch_contracts_states, fetch_new_and_compare_contract_states, get_owner, \
-    get_user_continue
+from tools.common import (
+    API,
+    OUTPUT_FOLDER,
+    PROXY,
+    fetch_contracts_states,
+    fetch_new_and_compare_contract_states,
+    get_owner,
+    get_user_continue,
+)
 from context import Context
 from tools.runners.common_runner import add_upgrade_all_command
 from contracts.position_creator_contract import PositionCreatorContract
@@ -12,9 +18,9 @@ from contracts.metastaking_contract import MetaStakingContract, MetaStakingContr
 from utils.utils_chain import WrapperAddress as Address, get_bytecode_codehash
 from utils.utils_tx import NetworkProviders
 from utils.utils_generic import get_file_from_url_or_path
-from runners.farm_runner import get_farm_addresses_from_chain
-from runners.staking_runner import get_staking_addresses_from_chain
-from runners.metastaking_runner import get_metastaking_addresses_from_chain_by_farms
+from tools.runners.farm_runner import get_farm_addresses_from_chain
+from tools.runners.staking_runner import get_staking_addresses_from_chain
+from tools.runners.metastaking_runner import get_metastaking_addresses_from_chain_by_farms
 from deploy import populate_deploy_lists
 import config
 
@@ -24,17 +30,17 @@ OUTPUT_POSITION_CREATOR_FILE = OUTPUT_FOLDER / "position_creator_data.json"
 
 def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     """Set up argument parser for position creator commands"""
-    group_parser = subparsers.add_parser('position-creator', help='position creator group commands')
+    group_parser = subparsers.add_parser("position-creator", help="position creator group commands")
     subgroup_parser = group_parser.add_subparsers()
 
-    contract_parser = subgroup_parser.add_parser('contract', help='position creator contract commands')
+    contract_parser = subgroup_parser.add_parser("contract", help="position creator contract commands")
 
     contract_group = contract_parser.add_subparsers()
     add_upgrade_all_command(contract_group, upgrade_position_creator_contract)
 
-    command_parser = contract_group.add_parser('deploy', help='deploy contract command')
+    command_parser = contract_group.add_parser("deploy", help="deploy contract command")
     command_parser.set_defaults(func=deploy_position_creator_contract)
-    command_parser = contract_group.add_parser('setup-whitelist', help='whitelist contract where needed command')
+    command_parser = contract_group.add_parser("setup-whitelist", help="whitelist contract where needed command")
     command_parser.set_defaults(func=setup_whitelist)
 
     return group_parser
@@ -74,7 +80,9 @@ def upgrade_position_creator_contract(args: Any):
 
     tx_hash = position_creator_contract.contract_upgrade(dex_owner, network_providers.proxy, bytecode_path)
 
-    if not network_providers.check_simple_tx_status(tx_hash, f"upgrade position creator contract: {position_creator_address}"):
+    if not network_providers.check_simple_tx_status(
+        tx_hash, f"upgrade position creator contract: {position_creator_address}"
+    ):
         if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
             return
 
@@ -98,14 +106,18 @@ def deploy_position_creator_contract(_):
     router_address = context.get_contracts(config.ROUTER_V2)[0].address
 
     position_creator_contract = PositionCreatorContract()
-    tx_hash, address = position_creator_contract.contract_deploy(dex_owner, network_providers.proxy, config.POSITION_CREATOR_BYTECODE_PATH,
-                                              [rewa_wrapped_address, router_address])
+    tx_hash, address = position_creator_contract.contract_deploy(
+        dex_owner,
+        network_providers.proxy,
+        config.POSITION_CREATOR_BYTECODE_PATH,
+        [rewa_wrapped_address, router_address],
+    )
 
     if not network_providers.check_simple_tx_status(tx_hash, f"deploy position creator contract"):
         return
-    
+
     print(f"Deployed position creator contract at address: {address}")
-    
+
 
 def setup_whitelist(_):
     """Setup whitelist for position creator contract"""
@@ -136,7 +148,7 @@ def setup_whitelist(_):
     print(f"Whitelisting position creator in {len(staking_addresses)} staking contracts...")
     if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
         return
-    
+
     for address in staking_addresses:
         staking_contract = StakingContract("", 0, 0, 0, StakingContractVersion.V3Boosted, "", address)
         if staking_contract.is_contract_whitelisted(position_creator_contract.address, network_providers.proxy):
@@ -147,11 +159,12 @@ def setup_whitelist(_):
     print(f"Whitelisting position creator in {len(staking_proxy_addresses)} metastaking contracts...")
     if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
         return
-    
+
     for address in staking_proxy_addresses:
-        metastaking_contract = MetaStakingContract("", "", "", "", "", "", "", MetaStakingContractVersion.V3Boosted, "", address)
+        metastaking_contract = MetaStakingContract(
+            "", "", "", "", "", "", "", MetaStakingContractVersion.V3Boosted, "", address
+        )
         if metastaking_contract.is_contract_whitelisted(position_creator_contract.address, network_providers.proxy):
             print(f"Position creator already whitelisted in metastaking contract: {address}")
             continue
         metastaking_contract.whitelist_contract(dex_owner, network_providers.proxy, position_creator_contract.address)
-    

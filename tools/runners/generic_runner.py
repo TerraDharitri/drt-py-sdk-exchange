@@ -1,6 +1,13 @@
 from argparse import ArgumentParser
 from typing import Any
-from tools.common import API, PROXY, fetch_contracts_states, fetch_new_and_compare_contract_states, get_owner, get_user_continue
+from tools.common import (
+    API,
+    PROXY,
+    fetch_contracts_states,
+    fetch_new_and_compare_contract_states,
+    get_owner,
+    get_user_continue,
+)
 from tools.runners.common_runner import add_upgrade_command
 from utils.utils_tx import NetworkProviders, upgrade_call
 from utils.utils_chain import WrapperAddress as Address, get_bytecode_codehash
@@ -11,10 +18,10 @@ import config
 
 def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     """Set up argument parser for generic contract commands"""
-    group_parser = subparsers.add_parser('generic', help='generic contract group commands')
+    group_parser = subparsers.add_parser("generic", help="generic contract group commands")
     subgroup_parser = group_parser.add_subparsers()
 
-    contract_parser = subgroup_parser.add_parser('contract', help='generic contract commands')
+    contract_parser = subgroup_parser.add_parser("contract", help="generic contract commands")
 
     contract_group = contract_parser.add_subparsers()
     add_upgrade_command(contract_group, upgrade_generic_contract)
@@ -50,15 +57,15 @@ def upgrade_generic_contract(args: Any):
 
         if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
             return
-        
+
     metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
     gas_limit = 200000000
 
-    tx_hash = upgrade_call("generic", network_providers.proxy, gas_limit, dex_owner, Address(address), 
-                           bytecode_path, metadata, [])
+    tx_hash = upgrade_call(
+        "generic", network_providers.proxy, gas_limit, dex_owner, Address(address), bytecode_path, metadata, []
+    )
 
-    if not network_providers.check_complex_tx_status(tx_hash, f"upgrade generic contract: "
-                                                              f"{address}"):
+    if not network_providers.check_complex_tx_status(tx_hash, f"upgrade generic contract: " f"{address}"):
         return
 
     if compare_states:

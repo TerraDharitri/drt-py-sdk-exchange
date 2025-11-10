@@ -1,10 +1,9 @@
 import sys
 import traceback
 
-from dharitri_py_sdk import Address, ContractQueryBuilder, ProxyNetworkProvider
+from dharitri_py_sdk import Address, ProxyNetworkProvider, SmartContractController, Token
 
 from utils.logger import get_logger
-from utils.utils_chain import base64_to_hex
 from typing import List, Any
 
 logger = get_logger(__name__)
@@ -24,60 +23,56 @@ class DataFetcher:
             raise ValueError(f"View name not registered in {type(self).__name__}")
 
     def _query_contract(self, view_name: str, attrs: List[Any] = []):
-        builder = ContractQueryBuilder(
-            contract=self.contract_address,
-            function=view_name,
-            call_arguments=attrs
-        )
-        query = builder.build()
-        return self.proxy.query_contract(query)
+        controller = SmartContractController(self.proxy.get_network_config().chain_id, self.proxy)
+        query = controller.create_query(contract=self.contract_address, function=view_name, arguments=attrs)
+        return controller.run_query(query)
 
     def _get_int_view(self, view_name: str, attrs: List[Any]) -> int:
         result = None
         try:
             result = self._query_contract(view_name, attrs)
-            if len(result.return_data) == 0 or result.return_data[0] == "":
+            if len(result.return_data_parts) == 0 or not result.return_data_parts[0]:
                 return 0
-            return int(base64_to_hex(result.return_data[0]), base=16)
+            return int(result.return_data_parts[0].hex(), base=16)
         except Exception as ex:
             logger.exception(f"Exception encountered on view name {view_name}: {ex}")
             if result:
-                logger.debug(f"Response content: {result.to_dictionary()}")
+                logger.debug(f"Response content: {result.__dict__}")
         return -1
 
     def _get_int_list_view(self, view_name: str, attrs: List[Any]) -> List[int]:
         result = None
         try:
             result = self._query_contract(view_name, attrs)
-            return [int(base64_to_hex(elem), base=16) for elem in result.return_data]
+            return [int(elem.hex(), base=16) for elem in result.return_data_parts]
         except Exception as ex:
             logger.exception(f"Exception encountered on view name {view_name}: {ex}")
             if result:
-                logger.debug(f"Response content: {result.to_dictionary()}")
+                logger.debug(f"Response content: {result.__dict__}")
         return []
 
     def _get_hex_view(self, view_name: str, attrs: List[Any]) -> str:
         result = None
         try:
             result = self._query_contract(view_name, attrs)
-            if len(result.return_data) == 0 or result.return_data[0] == "":
+            if len(result.return_data_parts) == 0 or not result.return_data_parts[0]:
                 return ""
-            return base64_to_hex(result.return_data[0])
+            return result.return_data_parts[0].hex()
         except Exception as ex:
             logger.exception(f"Exception encountered on view name {view_name}: {ex}")
             if result:
-                logger.debug(f"Response content: {result.to_dictionary()}")
+                logger.debug(f"Response content: {result.__dict__}")
         return ""
 
     def _get_hex_list_view(self, view_name: str, attrs: List[Any]) -> List[str]:
         result = None
         try:
             result = self._query_contract(view_name, attrs)
-            return [base64_to_hex(elem) for elem in result.return_data]
+            return [elem.hex() for elem in result.return_data_parts]
         except Exception as ex:
             logger.exception(f"Exception encountered on view name {view_name}: {ex}")
             if result:
-                logger.debug(f"Response content: {result.to_dictionary()}")
+                logger.debug(f"Response content: {result.__dict__}")
         return []
 
 
@@ -138,7 +133,7 @@ class RouterContractDataFetcher(DataFetcher):
         super().__init__(contract_address, proxy_url)
         self.view_handler_map = {
             "getAllPairsManagedAddresses": self._get_hex_list_view,
-            "getPairTemplateAddress": self._get_hex_view
+            "getPairTemplateAddress": self._get_hex_view,
         }
 
 
@@ -155,8 +150,9 @@ class PriceDiscoveryContractDataFetcher(DataFetcher):
         }
 
     def get_token_reserve(self, token_ticker: str) -> int:
-        data = self.proxy.get_fungible_token_of_account(self.contract_address, token_ticker)
-        return data.balance
+        token = Token(token_ticker)
+        data = self.proxy.get_token_of_account(self.contract_address, token)
+        return data.amount
 
 
 class FarmContractDataFetcher(DataFetcher):
@@ -178,7 +174,7 @@ class FarmContractDataFetcher(DataFetcher):
             "getState": self._get_int_view,
             "getPairContractManagedAddress": self._get_hex_view,
             "getUserTotalFarmPosition": self._get_int_view,
-            "getCurrentWeek": self._get_int_view,            
+            "getCurrentWeek": self._get_int_view,
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserEnergyForWeek": self._get_hex_view,
@@ -214,12 +210,14 @@ class PairContractDataFetcher(DataFetcher):
             "getState": self._get_int_view,
             "getReservesAndTotalSupply": self._get_int_list_view,
             "updateAndGetTokensForGivenPositionWithSafePrice": self._get_hex_list_view,
-            "getPriceObservation": self._get_hex_list_view
+            "getPriceObservation": self._get_hex_list_view,
+            "getSafePriceRoundSaveInterval": self._get_int_view,
         }
 
     def get_token_reserve(self, token_ticker: str) -> int:
-        data = self.proxy.get_fungible_token_of_account(self.contract_address, token_ticker)
-        return data.balance
+        token = Token(token_ticker)
+        data = self.proxy.get_token_of_account(self.contract_address, token)
+        return data.amount
 
 
 class FeeCollectorContractDataFetcher(DataFetcher):
@@ -230,16 +228,26 @@ class FeeCollectorContractDataFetcher(DataFetcher):
             "getEquivalent": self._get_int_view,
             "updateAndGetSafePrice": self._get_hex_view,
             "getLpTokenIdentifier": self._get_hex_view,
-            "getTotalRewardsForWeek": self._get_hex_view,
             "getTokensForGivenPosition": self._get_int_list_view,
             "getReservesAndTotalSupply": self._get_int_list_view,
-            "getUserEnergyForWeek": self._get_hex_view,
-            "getTotalEnergyForWeek": self._get_int_view,
+            "getAccumulatedFees": self._get_int_view,
+            "getTotalRewardsForWeek": self._get_hex_view,
+            "getLastLockedTokensAddWeek": self._get_int_view,
+            "getLockedTokensPerBlock": self._get_int_view,
+            "getLockingScAddress": self._get_hex_view,
+            "getLockEpochs": self._get_int_view,
+            "getEnergyFactoryAddress": self._get_hex_view,
+            "getFirstWeekStartEpoch": self._get_int_view,
+            "getRewardTokens": self._get_hex_list_view,
+            "getAllKnownContracts": self._get_hex_list_view,
+            "getRewardsClaimed": self._get_int_view,
+            "getTokenAvailableAmount": self._get_int_view,
         }
 
     def get_token_reserve(self, token_ticker: str) -> int:
-        data = self.proxy.get_fungible_token_of_account(self.contract_address, token_ticker)
-        return data.balance
+        token = Token(token_ticker)
+        data = self.proxy.get_token_of_account(self.contract_address, token)
+        return data.amount
 
 
 class StakingContractDataFetcher(DataFetcher):
@@ -260,7 +268,7 @@ class StakingContractDataFetcher(DataFetcher):
             "getFarmingTokenId": self._get_hex_view,
             "getState": self._get_int_view,
             "getUserTotalFarmPosition": self._get_int_view,
-            "getCurrentWeek": self._get_int_view,            
+            "getCurrentWeek": self._get_int_view,
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserEnergyForWeek": self._get_hex_view,
@@ -301,7 +309,7 @@ class LiquidLockingContractDataFetcher(DataFetcher):
             "lockedTokens": self._get_hex_list_view,
             "unlockedTokens": self._get_hex_list_view,
             "whitelistedTokens": self._get_hex_list_view,
-            "unbondPeriod": self._get_int_view
+            "unbondPeriod": self._get_int_view,
         }
 
 
@@ -317,7 +325,7 @@ class BaseFarmContractDataFetcher(DataFetcher):
             "getDivisionSafetyConstant": self._get_int_view,
             "getFarmTokenId": self._get_hex_view,
             "getFarmingTokenId": self._get_hex_view,
-            "getState": self._get_int_view
+            "getState": self._get_int_view,
         }
 
 
@@ -325,7 +333,7 @@ class BaseBoostedContractDataFetcher(DataFetcher):
     def __init__(self, contract_address: Address, proxy_url: str):
         super().__init__(contract_address, proxy_url)
         self.view_handler_map = {
-            "getCurrentWeek": self._get_int_view,            
+            "getCurrentWeek": self._get_int_view,
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserTotalFarmPosition": self._get_int_view,
@@ -344,8 +352,15 @@ class BaseBoostedContractDataFetcher(DataFetcher):
 class BaseContractWhitelistDataFetcher(DataFetcher):
     def __init__(self, contract_address: Address, proxy_url: str):
         super().__init__(contract_address, proxy_url)
+        self.view_handler_map = {"isSCAddressWhitelisted": self._get_int_view}
+
+
+class PermissionsHubContractDataFetcher(DataFetcher):
+    def __init__(self, contract_address: Address, proxy_url: str):
+        super().__init__(contract_address, proxy_url)
         self.view_handler_map = {
-            "isSCAddressWhitelisted": self._get_int_view
+            "isWhitelisted": self._get_int_view,
+            "getBlacklistedAddresses": self._get_hex_list_view,
         }
 
 
@@ -367,7 +382,7 @@ class ChainDataFetcher:
             return 0
         try:
             response = self.proxy.get_transaction(txhash)
-            return response.block_nonce
+            return response.nonce
 
         except Exception as ex:
             print("Exception encountered:", ex)
@@ -377,7 +392,7 @@ class ChainDataFetcher:
     def get_current_block_nonce(self) -> int:
         try:
             response = self.proxy.get_network_status(1)
-            return response.highest_final_nonce
+            return response.block_nonce
         except Exception as ex:
             print("Exception encountered:", ex)
             traceback.print_exception(*sys.exc_info())

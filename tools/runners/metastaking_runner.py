@@ -4,24 +4,39 @@ from time import sleep
 from typing import Any
 
 from dharitri_py_sdk import Address
-from dharitri_py_sdk.core.transaction_builders import ContractCallBuilder, \
-    DefaultTransactionBuildersConfiguration
+from dharitri_py_sdk import SmartContractTransactionsFactory, TransactionsFactoryConfig
 from contracts.contract_identities import MetaStakingContractVersion
 from contracts.metastaking_contract import MetaStakingContract
 from events.event_generators import get_lp_from_metastake_token_attributes
-from tools.common import API, OUTPUT_FOLDER, PROXY, \
-    fetch_and_save_contracts, fetch_contracts_states, \
-    fetch_new_and_compare_contract_states, get_owner, \
-    get_saved_contract_addresses, get_user_continue, rule_of_three, run_graphql_query
-from tools.runners.common_runner import add_generate_transaction_command, \
-    add_upgrade_all_command, add_upgrade_command, \
-    get_acounts_with_token, read_accounts_from_json, \
-    add_verify_command, verify_contracts, fund_shadowfork_accounts, \
-    get_default_signature, sync_account_nonce
+from tools.common import (
+    API,
+    OUTPUT_FOLDER,
+    PROXY,
+    fetch_and_save_contracts,
+    fetch_contracts_states,
+    fetch_new_and_compare_contract_states,
+    get_owner,
+    get_saved_contract_addresses,
+    get_user_continue,
+    rule_of_three,
+    run_graphql_query,
+)
+from tools.runners.common_runner import (
+    add_generate_transaction_command,
+    add_upgrade_all_command,
+    add_upgrade_command,
+    get_acounts_with_token,
+    read_accounts_from_json,
+    add_verify_command,
+    verify_contracts,
+    fund_shadowfork_accounts,
+    get_default_signature,
+    sync_account_nonce,
+)
 from tools.runners.farm_runner import get_farm_addresses_from_chain
-from utils.utils_chain import Account, WrapperAddress, get_bytecode_codehash
-from utils.utils_tx import DCDTToken, NetworkProviders
-from utils.utils_generic import get_file_from_url_or_path
+from utils.utils_chain import Account, WrapperAddress, get_bytecode_codehash, base64_to_hex
+from utils.utils_tx import DCDTToken, NetworkProviders, _prep_legacy_args
+from utils.utils_generic import get_file_from_url_or_path, split_to_chunks
 
 import config
 
@@ -38,32 +53,35 @@ OUTPUT_METASTAKING_V2_CONTRACTS_FILE = OUTPUT_FOLDER / "metastakingv2_data.json"
 
 def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     """Set up argument parser for metastaking commands"""
-    group_parser = subparsers.add_parser('metastakings', help='metastaking group commands')
+    group_parser = subparsers.add_parser("metastakings", help="metastaking group commands")
     subgroup_parser = group_parser.add_subparsers()
 
-    contract_parser = subgroup_parser.add_parser('contract', help='metastaking contract commands')
+    contract_parser = subgroup_parser.add_parser("contract", help="metastaking contract commands")
 
     contract_group = contract_parser.add_subparsers()
-    
-    command_parser = contract_group.add_parser('fetch-all', help='fetch all contracts command')
+
+    command_parser = contract_group.add_parser("fetch-all", help="fetch all contracts command")
     command_parser.set_defaults(func=fetch_and_save_metastakings_from_chain)
 
-    command_parser = contract_group.add_parser('upgrade-all-v1', help='upgrade all v1 contracts command')
-    command_parser.add_argument('--compare-states', action='store_true',
-                        help='compare states before and after upgrade')
-    command_parser.add_argument('--bytecode', type=str, help='optional: contract bytecode path/url; defaults to config path')
+    command_parser = contract_group.add_parser("upgrade-all-v1", help="upgrade all v1 contracts command")
+    command_parser.add_argument("--compare-states", action="store_true", help="compare states before and after upgrade")
+    command_parser.add_argument(
+        "--bytecode", type=str, help="optional: contract bytecode path/url; defaults to config path"
+    )
     command_parser.set_defaults(func=upgrade_metastaking_v1_contracts)
-    command_parser = contract_group.add_parser('upgrade-all-v2', help='upgrade all v2 contracts command')
-    command_parser.add_argument('--compare-states', action='store_true',
-                        help='compare states before and after upgrade')
-    command_parser.add_argument('--bytecode', type=str, help='optional: contract bytecode path/url; defaults to config path')
+    command_parser = contract_group.add_parser("upgrade-all-v2", help="upgrade all v2 contracts command")
+    command_parser.add_argument("--compare-states", action="store_true", help="compare states before and after upgrade")
+    command_parser.add_argument(
+        "--bytecode", type=str, help="optional: contract bytecode path/url; defaults to config path"
+    )
     command_parser.set_defaults(func=upgrade_metastaking_v2_contracts)
 
-    command_parser = contract_group.add_parser('upgrade-by-codehash', help='upgrade contract command')
-    command_parser.add_argument('--compare-states', action='store_true',
-                        help='compare states before and after upgrade')
-    command_parser.add_argument('--codehash', type=str, help='contract codehash')
-    command_parser.add_argument('--bytecode', type=str, help='optional: contract bytecode path/url; defaults to config path')
+    command_parser = contract_group.add_parser("upgrade-by-codehash", help="upgrade contract command")
+    command_parser.add_argument("--compare-states", action="store_true", help="compare states before and after upgrade")
+    command_parser.add_argument("--codehash", type=str, help="contract codehash")
+    command_parser.add_argument(
+        "--bytecode", type=str, help="optional: contract bytecode path/url; defaults to config path"
+    )
     command_parser.set_defaults(func=upgrade_metastaking_contracts_by_codehash)
 
     add_upgrade_command(contract_group, upgrade_metastaking_contract)
@@ -71,14 +89,22 @@ def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     add_verify_command(contract_group, verify_metastaking_v1_contracts, "verify-v1")
     add_verify_command(contract_group, verify_metastaking_v2_contracts, "verify-v2")
 
-    command_parser = contract_group.add_parser('set-energy-factory-all', help='set energy factory for all v2 contracts command')
+    command_parser = contract_group.add_parser(
+        "set-energy-factory-all", help="set energy factory for all v2 contracts command"
+    )
     command_parser.set_defaults(func=set_energy_factory)
 
-    transactions_parser = subgroup_parser.add_parser('generate-transactions', help='metastaking transactions commands')
+    transactions_parser = subgroup_parser.add_parser("generate-transactions", help="metastaking transactions commands")
 
     transactions_group = transactions_parser.add_subparsers()
-    add_generate_transaction_command(transactions_group, generate_unstake_farm_tokens_transaction, 'unstakeFarmTokens', 'unstake farm tokens command')
-    add_generate_transaction_command(transactions_group, generate_stake_farm_tokens_transaction, 'stakeFarmTokens', 'stake farm tokens command')
+    add_generate_transaction_command(
+        transactions_group, generate_unstake_farm_tokens_transaction, "unstakeFarmTokens", "unstake farm tokens command"
+    )
+    add_generate_transaction_command(
+        transactions_group, generate_stake_farm_tokens_transaction, "stakeFarmTokens", "stake farm tokens command"
+    )
+
+    return group_parser
 
 
 def fetch_and_save_metastakings_from_chain(_):
@@ -96,7 +122,7 @@ def fetch_and_save_metastakings_from_chain(_):
     metastakings_v1 = get_metastaking_addresses_from_chain()
     for address in metastakings_v2:
         metastakings_v1.remove(address)
-    
+
     print(f"Retrieved {len(metastakings_v1)} metastaking v1 contracts.")
     print(f"Retrieved {len(metastakings_v2)} metastaking v2 contracts.")
 
@@ -104,7 +130,9 @@ def fetch_and_save_metastakings_from_chain(_):
     fetch_and_save_contracts(metastakings_v2, METASTAKINGS_V2_LABEL, OUTPUT_METASTAKING_V2_CONTRACTS_FILE)
 
 
-def upgrade_metastaking_contracts(label: str, file: str, bytecode_path: str = '', compare_states: bool = False, codehash: str = ''):
+def upgrade_metastaking_contracts(
+    label: str, file: str, bytecode_path: str = "", compare_states: bool = False, codehash: str = ""
+):
     """Upgrade metastaking contracts"""
 
     print(f"Upgrade {label} contracts")
@@ -117,13 +145,17 @@ def upgrade_metastaking_contracts(label: str, file: str, bytecode_path: str = ''
         print("No metastaking contracts available!")
         return
     print(f"Processing {len(metastaking_addresses)} metastaking contracts.")
-    
+
     version = MetaStakingContractVersion.V1 if label == METASTAKINGS_V1_LABEL else MetaStakingContractVersion.V2
 
     if bytecode_path:
         bytecode = get_file_from_url_or_path(bytecode_path)
     else:
-        config_bytecode = config.STAKING_PROXY_V3_BYTECODE_PATH if version == MetaStakingContractVersion.V2 else config.STAKING_PROXY_V2_BYTECODE_PATH
+        config_bytecode = (
+            config.STAKING_PROXY_V3_BYTECODE_PATH
+            if version == MetaStakingContractVersion.V2
+            else config.STAKING_PROXY_V2_BYTECODE_PATH
+        )
         bytecode = get_file_from_url_or_path(config_bytecode)
 
     print(f"New bytecode codehash: {get_bytecode_codehash(bytecode)}")
@@ -145,8 +177,9 @@ def upgrade_metastaking_contracts(label: str, file: str, bytecode_path: str = ''
 
         tx_hash = metastaking_contract.contract_upgrade(dex_owner, network_providers.proxy, bytecode, [])
 
-        if not network_providers.check_simple_tx_status(tx_hash,
-                                                         f"upgrade metastaking contract: {metastaking_address}"):
+        if not network_providers.check_simple_tx_status(
+            tx_hash, f"upgrade metastaking contract: {metastaking_address}"
+        ):
             if not get_user_continue(config.FORCE_CONTINUE_PROMPT):
                 return
 
@@ -181,8 +214,12 @@ def upgrade_metastaking_contracts_by_codehash(args: Any):
     if not codehash:
         print("Missing coehash argument!")
         return
-    upgrade_metastaking_contracts(METASTAKINGS_V1_LABEL, OUTPUT_METASTAKING_V1_CONTRACTS_FILE, bytecode, compare_states, codehash)
-    upgrade_metastaking_contracts(METASTAKINGS_V2_LABEL, OUTPUT_METASTAKING_V2_CONTRACTS_FILE, bytecode, compare_states, codehash)
+    upgrade_metastaking_contracts(
+        METASTAKINGS_V1_LABEL, OUTPUT_METASTAKING_V1_CONTRACTS_FILE, bytecode, compare_states, codehash
+    )
+    upgrade_metastaking_contracts(
+        METASTAKINGS_V2_LABEL, OUTPUT_METASTAKING_V2_CONTRACTS_FILE, bytecode, compare_states, codehash
+    )
 
 
 def upgrade_metastaking_contract(args: Any):
@@ -216,13 +253,13 @@ def upgrade_metastaking_contract(args: Any):
     if not get_user_continue():
         return
 
-    metastaking_contract = MetaStakingContract.load_contract_by_address(metastaking_address, MetaStakingContractVersion.V3Boosted)
+    metastaking_contract = MetaStakingContract.load_contract_by_address(
+        metastaking_address, MetaStakingContractVersion.V3Boosted
+    )
 
-    tx_hash = metastaking_contract.contract_upgrade(dex_owner, network_providers.proxy,
-                                                    bytecode_path, [], True)
+    tx_hash = metastaking_contract.contract_upgrade(dex_owner, network_providers.proxy, bytecode_path, [], True)
 
-    if not network_providers.check_simple_tx_status(tx_hash,
-                                                     f"upgrade metastaking contract: {metastaking_address}"):
+    if not network_providers.check_simple_tx_status(tx_hash, f"upgrade metastaking contract: {metastaking_address}"):
         if not get_user_continue():
             return
 
@@ -231,14 +268,14 @@ def upgrade_metastaking_contract(args: Any):
 
     if not get_user_continue():
         return
-    
+
 
 def verify_metastaking_v1_contracts(args: Any):
     print("Verifying metastaking v1 contracts...")
 
     all_addresses = get_metastaking_addresses(METASTAKINGS_V1_LABEL, OUTPUT_METASTAKING_V1_CONTRACTS_FILE)
     verify_contracts(args, all_addresses)
-    
+
     print("All contracts have been verified.")
 
 
@@ -247,7 +284,7 @@ def verify_metastaking_v2_contracts(args: Any):
 
     all_addresses = get_metastaking_addresses(METASTAKINGS_V2_LABEL, OUTPUT_METASTAKING_V2_CONTRACTS_FILE)
     verify_contracts(args, all_addresses)
-    
+
     print("All contracts have been verified.")
 
 
@@ -263,13 +300,15 @@ def set_energy_factory(_):
     if not metastaking_addresses:
         print("No metastaking contracts available!")
         return
-    
+
     settable_addresses = []
     for metastaking_address in metastaking_addresses:
-        metastaking_contract = MetaStakingContract("", "", "", "", "", "", "", MetaStakingContractVersion.V2, "", metastaking_address)
+        metastaking_contract = MetaStakingContract(
+            "", "", "", "", "", "", "", MetaStakingContractVersion.V2, "", metastaking_address
+        )
         if metastaking_contract.get_energy_factory_address(network_providers.proxy) != energy_factory_address:
             settable_addresses.append(metastaking_address)
-    
+
     print(f"Set energy factory for {len(settable_addresses)} metastaking v2 contracts.")
 
     if not get_user_continue():
@@ -279,12 +318,17 @@ def set_energy_factory(_):
     for metastaking_address in settable_addresses:
         print(f"Processing contract {count} / {len(settable_addresses)}: {metastaking_address}")
 
-        metastaking_contract = MetaStakingContract("", "", "", "", "", "", "", MetaStakingContractVersion.V2, "", metastaking_address)
+        metastaking_contract = MetaStakingContract(
+            "", "", "", "", "", "", "", MetaStakingContractVersion.V2, "", metastaking_address
+        )
 
-        tx_hash = metastaking_contract.set_energy_factory_address(dex_owner, network_providers.proxy, energy_factory_address)
+        tx_hash = metastaking_contract.set_energy_factory_address(
+            dex_owner, network_providers.proxy, energy_factory_address
+        )
 
-        if not network_providers.check_simple_tx_status(tx_hash,
-                                                            f"set energy factory for metastaking contract: {metastaking_address}"):
+        if not network_providers.check_simple_tx_status(
+            tx_hash, f"set energy factory for metastaking contract: {metastaking_address}"
+        ):
             if not get_user_continue():
                 return
 
@@ -308,7 +352,7 @@ def generate_unstake_farm_tokens_transaction(args: Any):
     network_providers = NetworkProviders(API, PROXY)
     network_providers.network = network_providers.proxy.get_network_config()
     chain_id = network_providers.proxy.get_network_config().chain_id
-    config_tx = DefaultTransactionBuildersConfiguration(chain_id=chain_id)
+    config_tx = TransactionsFactoryConfig(chain_id=chain_id)
     signature = get_default_signature()
     default_account = Account(None, config.DEFAULT_OWNER)
     default_account.sync_nonce(network_providers.proxy)
@@ -326,7 +370,9 @@ def generate_unstake_farm_tokens_transaction(args: Any):
         metastaking_addresses = [metastaking_address]
 
     for metastaking_address in metastaking_addresses:
-        metastaking_contract = MetaStakingContract.load_contract_by_address(metastaking_address, MetaStakingContractVersion.V3Boosted)
+        metastaking_contract = MetaStakingContract.load_contract_by_address(
+            metastaking_address, MetaStakingContractVersion.V3Boosted
+        )
         accounts_with_token = get_acounts_with_token(exported_accounts, metastaking_contract.metastake_token)
         print(f"Found {len(accounts_with_token)} accounts with token {metastaking_contract.metastake_token}")
 
@@ -342,59 +388,62 @@ def generate_unstake_farm_tokens_transaction(args: Any):
             account.address = WrapperAddress.from_bech32(account_with_token.address)
             account.nonce = account_with_token.nonce
             tokens = [
-                token for token in account_with_token.account_tokens_supply
+                token
+                for token in account_with_token.account_tokens_supply
                 if token.token_name == metastaking_contract.metastake_token
             ]
             for token in tokens:
                 attributes_hex = base64_to_hex(token.attributes)
                 decoded_metastake_tk_attributes = get_lp_from_metastake_token_attributes(attributes_hex)
                 farm_token_amount = rule_of_three(
-                    int(decoded_metastake_tk_attributes['staking_farm_token_amount']),
-                    int(decoded_metastake_tk_attributes['lp_farm_token_amount']),
+                    int(decoded_metastake_tk_attributes["staking_farm_token_amount"]),
+                    int(decoded_metastake_tk_attributes["lp_farm_token_amount"]),
                     int(token.supply),
                 )
 
-                payment_tokens = [DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_payment()]
+                payment_tokens = [
+                    DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_transfer()
+                ]
                 if not account.address.is_smart_contract():
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=Address.new_from_bech32(metastaking_address),
-                        function_name="unstakeFarmTokens",
-                        caller=account.address,
-                        call_arguments=[1, 1, farm_token_amount],
-                        value=0,
-                        gas_limit=75000000,
-                        nonce=account.nonce,
-                        dcdt_transfers=payment_tokens
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        account.address,
+                        Address.new_from_bech32(metastaking_address),
+                        "unstakeFarmTokens",
+                        75000000,
+                        _prep_legacy_args([1, 1, farm_token_amount]),
+                        0,
+                        payment_tokens,
                     )
-                    tx = builder.build()
+                    tx.nonce = account.nonce
                     tx.signature = signature
 
                     transactions.append(tx)
                     account.nonce += 1
                 else:
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=account.address,
-                        function_name="callInternalTransferEndpoint",
-                        caller=default_account.address,
-                        call_arguments=[
-                            token.token_name,
-                            int(token.token_nonce_hex, 16),
-                            int(token.supply),
-                            Address.new_from_bech32(metastaking_address),
-                            "unstakeFarmTokens",
-                            1, 1, farm_token_amount
-                        ],
-                        value=0,
-                        gas_limit=50000000,
-                        nonce=default_account.nonce
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        default_account.address,
+                        account.address,
+                        "callInternalTransferEndpoint",
+                        50000000,
+                        _prep_legacy_args(
+                            [
+                                token.token_name,
+                                int(token.token_nonce_hex, 16),
+                                int(token.supply),
+                                Address.new_from_bech32(metastaking_address),
+                                "unstakeFarmTokens",
+                                1,
+                                1,
+                                farm_token_amount,
+                            ]
+                        ),
                     )
-                    default_account.nonce += 1
-                    tx = builder.build()
+                    tx.nonce = default_account.nonce
                     tx.signature = signature
                     transactions.append(tx)
-
+                    default_account.nonce += 1
             index = exported_accounts.index(account_with_token)
             exported_accounts[index].nonce = account.nonce
             accounts_index += 1
@@ -420,7 +469,9 @@ def generate_stake_farm_tokens_transaction(args: Any):
     print(f"Generate stake farm tokens transaction for metastaking contract {metastaking_address}")
 
     network_providers = NetworkProviders(API, PROXY)
-    metastaking_contract = MetaStakingContract.load_contract_by_address(metastaking_address, MetaStakingContractVersion.V2)
+    metastaking_contract = MetaStakingContract.load_contract_by_address(
+        metastaking_address, MetaStakingContractVersion.V2
+    )
 
     exported_accounts = read_accounts_from_json(exported_accounts_path)
     accounts_with_token = get_acounts_with_token(exported_accounts, metastaking_contract.metastake_token)
@@ -429,7 +480,11 @@ def generate_stake_farm_tokens_transaction(args: Any):
         account = Account(account_with_token.address, config.DEFAULT_OWNER)
         account.address = WrapperAddress.from_bech32(account_with_token.address)
         account.sync_nonce(network_providers.proxy)
-        tokens = [token for token in account_with_token.account_tokens_supply if token.token_name == metastaking_contract.metastake_token]
+        tokens = [
+            token
+            for token in account_with_token.account_tokens_supply
+            if token.token_name == metastaking_contract.metastake_token
+        ]
         for token in tokens:
             metastaking_contract.enter_metastake(
                 network_providers.proxy,
@@ -450,8 +505,8 @@ def get_metastaking_addresses_from_chain() -> list[str]:
     result = run_graphql_query(config.GRAPHQL, query)
 
     address_list = []
-    for entry in result['data']['stakingProxies']:
-        address_list.append(entry['address'])
+    for entry in result["data"]["stakingProxies"]:
+        address_list.append(entry["address"])
 
     return address_list
 
@@ -466,9 +521,9 @@ def get_metastaking_addresses_from_chain_by_farms(farm_addresses: list) -> list[
     result = run_graphql_query(config.GRAPHQL, query)
 
     address_list = []
-    for entry in result['data']['stakingProxies']:
-        if entry['lpFarmAddress'] in farm_addresses:
-            address_list.append(entry['address'])
+    for entry in result["data"]["stakingProxies"]:
+        if entry["lpFarmAddress"] in farm_addresses:
+            address_list.append(entry["address"])
 
     return address_list
 
@@ -492,6 +547,6 @@ def get_metastaking_v2_addresses() -> list[str]:
     return get_metastaking_addresses(METASTAKINGS_V2_LABEL, OUTPUT_METASTAKING_V2_CONTRACTS_FILE)
 
 
-def get_metastaking_addresses(label: str, file: str, searched_bytecode_hash: str = '') -> list[str]:
+def get_metastaking_addresses(label: str, file: str, searched_bytecode_hash: str = "") -> list[str]:
     """Get saved metastaking addresses"""
     return get_saved_contract_addresses(label, file, searched_bytecode_hash)

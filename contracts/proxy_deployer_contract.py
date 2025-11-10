@@ -21,16 +21,15 @@ class ProxyDeployerContract(DEXContractInterface):
         self.template = template_name
 
     def get_config_dict(self) -> dict:
-        output_dict = {
-            "address": self.address,
-            "template": self.template
-        }
+        output_dict = {"address": self.address, "template": self.template}
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return ProxyDeployerContract(address=config_dict['address'],
-                                     template_name=config_dict['template'])
+        return ProxyDeployerContract(address=config_dict["address"], template_name=config_dict["template"])
+
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -50,18 +49,16 @@ class ProxyDeployerContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return "", ""
 
-        arguments = [
-            Address(args[0])
-        ]
+        arguments = [Address(args[0])]
 
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
 
     def farm_contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """Expecting as args:
-            type[str]: reward token id
-            type[str]: farming token id
-            type[str]: pair contract address
+        type[str]: reward token id
+        type[str]: farming token id
+        type[str]: pair contract address
         """
         function_purpose = f"Deploy farm via router"
         logger.info(function_purpose)
@@ -73,11 +70,7 @@ class ProxyDeployerContract(DEXContractInterface):
             return address, tx_hash
 
         gas_limit = 100000000
-        sc_args = [
-            args[0],
-            args[1],
-            Address(args[2])
-        ]
+        sc_args = [args[0], args[1], Address(args[2])]
 
         tx_hash = endpoint_call(proxy, gas_limit, deployer, Address(self.address), "deployFarm", sc_args)
 
@@ -88,7 +81,7 @@ class ProxyDeployerContract(DEXContractInterface):
         return tx_hash, address
 
     def call_farm_endpoint(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
+        """Expected as args:
         type[str]: farm address
         type[str]: farm endpoint
         type[list]: farm endpoint args

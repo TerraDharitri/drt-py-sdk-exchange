@@ -15,35 +15,30 @@ logger = get_logger(__name__)
 
 class EnergyUpdateContract(DEXContractInterface):
     """
-        EnergyUpdateContract class
+    EnergyUpdateContract class
     """
 
     def __init__(self, address: str = ""):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {
-            "address": self.address
-        }
+        output_dict = {"address": self.address}
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return EnergyUpdateContract(address=config_dict['address'])
+        return EnergyUpdateContract(address=config_dict["address"])
 
     @classmethod
     def load_contract_by_address(cls, address: str):
         raise NotImplementedError
 
-    def contract_deploy(
-            self,
-            deployer: Account,
-            proxy: ProxyNetworkProvider,
-            bytecode_path,
-            args: list = None
-    ):
+    def get_contract_tokens(self) -> list[str]:
+        return []
+
+    def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None):
         """
-            Expected as args:
+        Expected as args:
         """
         function_purpose = f"deploy {type(self).__name__} contract"
         logger.info(function_purpose)
@@ -51,15 +46,7 @@ class EnergyUpdateContract(DEXContractInterface):
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
         gas_limit = 200000000
 
-        tx_hash, address = deploy(
-            type(self).__name__,
-            proxy,
-            gas_limit,
-            deployer,
-            bytecode_path,
-            metadata,
-            []
-        )
+        tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, [])
 
         return tx_hash, address
 

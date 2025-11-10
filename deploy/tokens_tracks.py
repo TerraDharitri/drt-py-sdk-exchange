@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -7,7 +6,7 @@ from typing import Any, Dict, List, Tuple
 
 from utils import utils_generic as utils
 from utils.utils_chain import WrapperAddress as Address
-from dharitri_py_sdk.network_providers.tokens import FungibleTokenOfAccountOnNetwork
+from dharitri_py_sdk import TokenAmountOnNetwork
 
 
 class BunchOfTracks:
@@ -17,17 +16,17 @@ class BunchOfTracks:
         self.all_tokens: List[str] = []
         self.prefix = prefix.upper()
 
-    def put_for_account(self, address: Address, tokens: List[FungibleTokenOfAccountOnNetwork]):
+    def put_for_account(self, address: Address, tokens: List[TokenAmountOnNetwork]):
         for token in tokens:
-            if not token.identifier.startswith(self.prefix):
+            if not token.token.identifier.startswith(self.prefix):
                 continue
 
-            balance = token.balance
+            balance = token.amount
 
-            if token not in self.accounts_by_token:
-                self.accounts_by_token[token.identifier] = dict()
+            if token.token.identifier not in self.accounts_by_token:
+                self.accounts_by_token[token.token.identifier] = dict()
 
-            self.accounts_by_token[token.identifier][address.bech32()] = balance
+            self.accounts_by_token[token.token.identifier][address.to_bech32()] = balance
 
     def put_all_tokens(self, tokens: List[str]):
         self.all_tokens = [token for token in tokens if token.startswith(self.prefix)]
@@ -77,10 +76,7 @@ class BunchOfTracks:
     def save(self, file: str):
         print(file)
         utils.ensure_folder(Path(file).parent)
-        utils.write_json_file(str(file), {
-            "accounts_by_token": self.accounts_by_token,
-            "all_tokens": self.all_tokens
-        })
+        utils.write_json_file(str(file), {"accounts_by_token": self.accounts_by_token, "all_tokens": self.all_tokens})
 
     def build_index_tokens_by_holder(self):
         print("build_index_tokens_by_holder - begin")

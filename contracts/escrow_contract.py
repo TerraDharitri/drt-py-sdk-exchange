@@ -13,14 +13,15 @@ class EscrowContract(DEXContractInterface):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {
-            "address": self.address
-        }
+        output_dict = {"address": self.address}
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return EscrowContract(address=config_dict['address'])
+        return EscrowContract(address=config_dict["address"])
+
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -28,10 +29,10 @@ class EscrowContract(DEXContractInterface):
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
         """Expecting as args:
-            type[str]: energy factory address
-            type[str]: locked token ID
-            type[int]: minimum locked epochs
-            type[int]: epochs cooldown duration
+        type[str]: energy factory address
+        type[str]: locked token ID
+        type[int]: minimum locked epochs
+        type[int]: epochs cooldown duration
         """
         function_purpose = "Deploy escrow contract"
         logger.info(function_purpose)
@@ -46,11 +47,11 @@ class EscrowContract(DEXContractInterface):
         arguments = args
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
-    
-    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None,
-                         no_init: bool = False):
-        """ Expected as args: []
-        """
+
+    def contract_upgrade(
+        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None, no_init: bool = False
+    ):
+        """Expected as args: []"""
         function_purpose = f"upgrade {type(self).__name__} contract"
         logger.info(function_purpose)
 
@@ -62,40 +63,43 @@ class EscrowContract(DEXContractInterface):
         else:
             arguments = []
 
-        tx_hash = upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
-                                        bytecode_path, metadata, arguments)
+        tx_hash = upgrade_call(
+            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
+        )
 
         return tx_hash
-    
+
     def lock_funds(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
-            type[List[DCDTToken]]: tokens list
-            type[address]: destination address
+        """Expected as args:
+        type[List[DCDTToken]]: tokens list
+        type[address]: destination address
         """
         function_purpose = "lock tokens"
         logger.info(function_purpose)
         if len(args) < 2:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(function_purpose, proxy, 60000000,
-                                        user, Address(self.address), "lockFunds", args)
-    
+        return multi_dcdt_endpoint_call(
+            function_purpose, proxy, 60000000, user, Address(self.address), "lockFunds", args
+        )
+
     def withdraw(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
-            type[address]: sender address
+        """Expected as args:
+        type[address]: sender address
         """
         function_purpose = "withdraw tokens"
         logger.info(function_purpose)
         if len(args) < 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(function_purpose, proxy, 10000000,
-                                        user, Address(self.address), "withdraw", args)
-    
+        return multi_dcdt_endpoint_call(
+            function_purpose, proxy, 10000000, user, Address(self.address), "withdraw", args
+        )
+
     def cancel_transfer(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """ Expected as args:
-            type[address]: sender address
-            type[address]: receiver address
+        """Expected as args:
+        type[address]: sender address
+        type[address]: receiver address
         """
         function_purpose = "cancel transfer"
         logger.info(function_purpose)

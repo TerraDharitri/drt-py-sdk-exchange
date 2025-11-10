@@ -7,7 +7,10 @@ from utils.utils_chain import Account
 from utils.utils_tx import broadcast_transactions
 from utils.utils_chain import BunchOfAccounts
 from dharitri_py_sdk import ProxyNetworkProvider, TokenPayment, Transaction
-from dharitri_py_sdk.core.transaction_builders import MultiDCDTNFTTransferBuilder, DefaultTransactionBuildersConfiguration
+from dharitri_py_sdk.core.transaction_builders import (
+    MultiDCDTNFTTransferBuilder,
+    DefaultTransactionBuildersConfiguration,
+)
 
 
 def main(cli_args: List[str]):

@@ -11,7 +11,7 @@ class ElasticIndexer:
 
     def fetch_tx_status(self, hash_str: str):
         url = f"{self.url}/transactions/{hash_str}"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         request_error_codes = [404, 408, 429, 500, 504]
         try:
             response = requests.get(url, headers=headers)
@@ -25,12 +25,13 @@ class ElasticIndexer:
                 response.raise_for_status()
                 return response.json()
             else:
-                print(f'Exception occurred: {ex}')
+                print(f"Exception occurred: {ex}")
 
     def is_tx_finalized(self, hash_str: str) -> bool:
         response = self.fetch_tx_status(hash_str)
-        if ('status' in response and response['status'] == 'success' and 'pendingResults' not in response) \
-                or ('status' in response and response['status'] == 'fail'):
+        if ("status" in response and response["status"] == "success" and "pendingResults" not in response) or (
+            "status" in response and response["status"] == "fail"
+        ):
             return True
         return False
 
@@ -44,7 +45,7 @@ class ElasticIndexer:
 
     def get_no_transactions_per_account(self, address: str):
         url = f"{self.url}/accounts/{address}/transactions/count"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         parsed = response.json()
@@ -52,7 +53,7 @@ class ElasticIndexer:
 
     def get_transactions_per_account(self, address: str):
         url = f"{self.url}/accounts/{address}/transactions"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         parsed = response.json()
@@ -60,7 +61,7 @@ class ElasticIndexer:
 
     def get_address_details(self, address: str):
         url = f"{self.url}/accounts/{address}"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         parsed = response.json()
@@ -68,7 +69,7 @@ class ElasticIndexer:
 
     def get_dcdt_data(self, token_id: str):
         url = f"{self.url}/tokens/{token_id}"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         parsed = response.json()
@@ -76,7 +77,7 @@ class ElasticIndexer:
 
     def get_nft_data(self, token_id: str):
         url = f"{self.url}/nfts/{token_id}"
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0'}
+        headers = {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:81.0) Gecko/20100101 Firefox/81.0"}
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         parsed = response.json()

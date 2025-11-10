@@ -4,9 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import List
 from dharitri_py_sdk import Address, Transaction, ProxyNetworkProvider
-from ported_arrows.stress.contracts.transaction_builder import (number_as_arg,
-                                                         string_as_arg,
-                                                         token_id_as_arg)
+from ported_arrows.stress.contracts.transaction_builder import number_as_arg, string_as_arg, token_id_as_arg
 from utils.utils_chain import Account
 from utils.utils_tx import broadcast_transactions
 from utils.utils_chain import BunchOfAccounts
@@ -40,16 +38,15 @@ def main(cli_args: List[str]):
         time.sleep(60 * 3)
 
 
-def create_swap_fixed_input(pair: Address, caller: Account, token_from: str, token_to: str, network: NetworkConfig) -> Transaction:
+def create_swap_fixed_input(
+    pair: Address, caller: Account, token_from: str, token_to: str, network: NetworkConfig
+) -> Transaction:
     amount_from = 100000
     amount_to_min = 1
     tx_data = f"DCDTTransfer@{token_id_as_arg(token_from)}@{number_as_arg(amount_from)}@{string_as_arg('swapTokensFixedInput')}@{token_id_as_arg(token_to)}@{number_as_arg(amount_to_min)}"
 
     transaction = Transaction(
-        chain_id=network.chain_id,
-        sender=caller.address.to_bech32(),
-        receiver=pair.to_bech32(),
-        gas_limit=8000000
+        chain_id=network.chain_id, sender=caller.address.to_bech32(), receiver=pair.to_bech32(), gas_limit=8000000
     )
     transaction.nonce = caller.nonce
     transaction.value = 0

@@ -17,11 +17,11 @@
 5. python3 tools/runner.py farms contract pause-all
 6. python3 tools/runner.py stakings contract pause-all
 7. python3 tools/runner.py energy-factory contract pause
-8. python3 tools/runner.py farms contract upgrade-all --compare-states --bytecode=https://github.com/TerraDharitri/drt-exchange-sc/releases/download/v3.1.1/farm-with-locked-rewards.wasm
-9. python3 tools/runner.py stakings contract upgrade --all --compare-states --bytecode=https://github.com/TerraDharitri/drt-exchange-sc/releases/download/v3.1.1/farm-staking.wasm
-10. python3 tools/runner.py energy-factory contract upgrade --bytecode=https://github.com/TerraDharitri/drt-exchange-sc/releases/download/v3.1.1/energy-factory.wasm
-11. python3 tools/runner.py generic contract upgrade --compare-states --address=drt1qqqqqqqqqqqqqpgqu64gygjs5ted4rupaewaszyhaxl9lv7m2jpsnffspa --bytecode=https://github.com/TerraDharitri/drt-exchange-sc/releases/download/v3.1.1/locked-token-wrapper.wasm
-12. python3 tools/runner.py router contract upgrade --compare-states --address=drt1qqqqqqqqqqqqqpgqq66xk9gfr4esuhem3jru86wg5hvp33a62jpsh4nhal --bytecode=https://github.com/TerraDharitri/drt-exchange-sc/releases/download/v3.1.1/router.wasm
+8. python3 tools/runner.py farms contract upgrade-all --compare-states --bytecode=https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/farm-with-locked-rewards.wasm
+9. python3 tools/runner.py stakings contract upgrade --all --compare-states --bytecode=https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/farm-staking.wasm
+10. python3 tools/runner.py energy-factory contract upgrade --bytecode=https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/energy-factory.wasm
+11. python3 tools/runner.py generic contract upgrade --compare-states --address=drt1qqqqqqqqqqqqqpgqu64gygjs5ted4rupaewaszyhaxl9lv7m2jpsnffspa --bytecode=https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/locked-token-wrapper.wasm
+12. python3 tools/runner.py router contract upgrade --compare-states --address=drt1qqqqqqqqqqqqqpgqq66xk9gfr4esuhem3jru86wg5hvp33a62jpsh4nhal --bytecode=https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/router.wasm
 13. python3 tools/runner.py router contract resume
 14. python3 tools/runner.py energy-factory contract resume
 15. python3 tools/runner.py farms contract resume-all
