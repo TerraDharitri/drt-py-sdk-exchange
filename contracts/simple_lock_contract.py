@@ -22,19 +22,17 @@ class SimpleLockContract(DEXContractInterface):
             "address": self.address,
             "locked_token": self.locked_token,
             "lp_proxy_token": self.lp_proxy_token,
-            "farm_proxy_token": self.farm_proxy_token,
+            "farm_proxy_token": self.farm_proxy_token
         }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return SimpleLockContract(
-            address=config_dict["address"],
-            locked_token=config_dict["locked_token"],
-            lp_proxy_token=config_dict["lp_proxy_token"],
-            farm_proxy_token=config_dict.get("farm_proxy_token"),
-        )
-
+        return SimpleLockContract(address=config_dict['address'],
+                                  locked_token=config_dict['locked_token'],
+                                  lp_proxy_token=config_dict['lp_proxy_token'],
+                                  farm_proxy_token=config_dict.get('farm_proxy_token'))
+    
     def get_contract_tokens(self) -> list[str]:
         return [self.locked_token, self.lp_proxy_token, self.farm_proxy_token]
 
@@ -61,14 +59,13 @@ class SimpleLockContract(DEXContractInterface):
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
         gas_limit = 200000000
 
-        return upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, []
-        )
+        return upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                            bytecode_path, metadata, [])
 
     def issue_locked_lp_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: token display name
-        type[str]: token ticker
+        """ Expected as args:
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = f"Issue locked LP token"
         logger.info(function_purpose)
@@ -78,21 +75,18 @@ class SimpleLockContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "issueLpProxyToken",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "issueLpProxyToken", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def issue_locked_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: token display name
-        type[str]: token ticker
+        """ Expected as args:
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = f"Issue locked farm token"
         logger.info(function_purpose)
@@ -102,21 +96,18 @@ class SimpleLockContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "issueFarmProxyToken",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "issueFarmProxyToken", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def issue_locked_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: token display name
-        type[str]: token ticker
+        """ Expected as args:
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = f"Issue locked token"
         logger.info(function_purpose)
@@ -126,16 +117,13 @@ class SimpleLockContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "issueLockedToken",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "issueLockedToken", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def set_local_roles_locked_token(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = f"Set local roles locked token"
@@ -154,10 +142,10 @@ class SimpleLockContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLocalRolesLpProxyToken", sc_args)
 
     def add_lp_to_whitelist(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: pair address
-        type[str]: first token identifier
-        type[str]: second token identifier
+        """ Expected as args:
+            type[str]: pair address
+            type[str]: first token identifier
+            type[str]: second token identifier
         """
         function_purpose = f"Add LP to Whitelist in simple lock contract"
         logger.info(function_purpose)
@@ -167,14 +155,18 @@ class SimpleLockContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), args[1], args[2]]
+        sc_args = [
+            Address(args[0]),
+            args[1],
+            args[2]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "addLpToWhitelist", sc_args)
 
     def add_farm_to_whitelist(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: farm address
-        type[str]: farming token identifier
-        type[str]: farm type: 0 - simple, 1 - locked, 2 - boosted
+        """ Expected as args:
+            type[str]: farm address
+            type[str]: farming token identifier
+            type[str]: farm type: 0 - simple, 1 - locked, 2 - boosted
         """
         function_purpose = f"Add Farm to Whitelist in simple lock contract"
         logger.info(function_purpose)
@@ -184,13 +176,17 @@ class SimpleLockContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), args[1], args[2]]
+        sc_args = [
+            Address(args[0]),
+            args[1],
+            args[2]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "addFarmToWhitelist", sc_args)
 
     def lock_tokens(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
-        type[int]: lock epochs
+        """ Expected as args:
+            type[List[DCDTToken]]: tokens list
+            type[int]: lock epochs
         """
         function_purpose = "lock tokens"
         logger.info(function_purpose)
@@ -199,15 +195,14 @@ class SimpleLockContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 10000000, user, Address(self.address), "lockTokens", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 10000000,
+                                        user, Address(self.address), "lockTokens", args)
 
     def add_liquidity_locked_token(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
-        type[int]: first token amount min
-        type[int]: second token amount min
+        """ Expected as args:
+                    type[List[DCDTToken]]: tokens list
+                    type[int]: first token amount min
+                    type[int]: second token amount min
         """
         function_purpose = "add liquidity for locked token"
         logger.info(function_purpose)
@@ -215,63 +210,58 @@ class SimpleLockContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 20000000, user, Address(self.address), "addLiquidityLockedToken", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 20000000,
+                                        user, Address(self.address), "addLiquidityLockedToken", args)
 
     def remove_liquidity_locked_token(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
-        type[int]: first token amount min
-        type[int]: second token amount min
+        """ Expected as args:
+                    type[List[DCDTToken]]: tokens list
+                    type[int]: first token amount min
+                    type[int]: second token amount min
         """
         function_purpose = "add liquidity for locked token"
         logger.info(function_purpose)
         if len(args) != 3:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 20000000, user, Address(self.address), "removeLiquidityLockedToken", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 20000000,
+                                        user, Address(self.address), "removeLiquidityLockedToken", args)
 
     def enter_farm_locked_token(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
+        """ Expected as args:
+                    type[List[DCDTToken]]: tokens list
         """
         function_purpose = "enter farm with locked token"
         logger.info(function_purpose)
         if len(args) != 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 30000000, user, Address(self.address), "enterFarmLockedToken", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 30000000,
+                                        user, Address(self.address), "enterFarmLockedToken", args)
 
     def exit_farm_locked_token(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
+        """ Expected as args:
+                    type[List[DCDTToken]]: tokens list
         """
         function_purpose = "exit farm with locked token"
         logger.info(function_purpose)
         if len(args) != 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 30000000, user, Address(self.address), "exitFarmLockedToken", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 30000000,
+                                        user, Address(self.address), "exitFarmLockedToken", args)
 
     def claim_farm_locked_token(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
+        """ Expected as args:
+                    type[List[DCDTToken]]: tokens list
         """
         function_purpose = "claim farm with locked token"
         logger.info(function_purpose)
         if len(args) != 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 30000000, user, Address(self.address), "farmClaimRewardsLockedToken", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 30000000,
+                                        user, Address(self.address), "farmClaimRewardsLockedToken", args)
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = []):
         pass

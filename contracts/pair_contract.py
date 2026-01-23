@@ -2,7 +2,7 @@ import sys
 import traceback
 import config
 
-from contracts.contract_identities import DEXContractInterface, PairContractVersion
+from contracts.contract_identities import (DEXContractInterface, PairContractVersion)
 from utils.contract_data_fetchers import PairContractDataFetcher
 from utils.logger import get_logger
 from utils.utils_tx import NetworkProviders, endpoint_call, upgrade_call, deploy, DCDTToken, multi_dcdt_endpoint_call
@@ -54,15 +54,8 @@ class SetCorrectReservesEvent:
 
 
 class PairContract(DEXContractInterface):
-    def __init__(
-        self,
-        firstToken: str,
-        secondToken: str,
-        version: PairContractVersion,
-        lpToken: str = "",
-        address: str = "",
-        proxy_contract=None,
-    ):
+    def __init__(self, firstToken: str, secondToken: str,  version: PairContractVersion,
+                 lpToken: str = "", address: str = "", proxy_contract=None):
         self.firstToken = firstToken
         self.secondToken = secondToken
         self.version = version
@@ -76,20 +69,18 @@ class PairContract(DEXContractInterface):
             "secondToken": self.secondToken,
             "lpToken": self.lpToken,
             "address": self.address,
-            "version": self.version.value,
+            "version": self.version.value
         }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return PairContract(
-            firstToken=config_dict["firstToken"],
-            secondToken=config_dict["secondToken"],
-            lpToken=config_dict["lpToken"],
-            address=config_dict["address"],
-            version=PairContractVersion(config_dict["version"]),
-        )
-
+        return PairContract(firstToken=config_dict['firstToken'],
+                            secondToken=config_dict['secondToken'],
+                            lpToken=config_dict['lpToken'],
+                            address=config_dict['address'],
+                            version=PairContractVersion(config_dict['version']))
+    
     def get_contract_tokens(self) -> list[str]:
         return [self.lpToken]
 
@@ -119,16 +110,11 @@ class PairContract(DEXContractInterface):
         gas_limit = 50000000
 
         tokens = [DCDTToken(event.tokenA, 0, event.amountA)]
-        sc_args = [tokens, event.tokenB, event.amountBmin]
-        return multi_dcdt_endpoint_call(
-            function_purpose,
-            network_provider.proxy,
-            gas_limit,
-            user,
-            Address(self.address),
-            "swapTokensFixedInput",
-            sc_args,
-        )
+        sc_args = [tokens,
+                   event.tokenB,
+                   event.amountBmin]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit,
+                                        user, Address(self.address), "swapTokensFixedInput", sc_args)
 
     def swap_fixed_output(self, network_provider: NetworkProviders, user: Account, event: SwapFixedOutputEvent):
         function_purpose = f"swap tokens fixed output"
@@ -139,51 +125,40 @@ class PairContract(DEXContractInterface):
         gas_limit = 50000000
 
         tokens = [DCDTToken(event.tokenA, 0, event.amountAmax)]
-        sc_args = [tokens, event.tokenB, event.amountB]
-        return multi_dcdt_endpoint_call(
-            function_purpose,
-            network_provider.proxy,
-            gas_limit,
-            user,
-            Address(self.address),
-            "swapTokensFixedOutput",
-            sc_args,
-        )
+        sc_args = [tokens,
+                   event.tokenB,
+                   event.amountB]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit,
+                                        user, Address(self.address), "swapTokensFixedOutput", sc_args)
 
     def add_liquidity(self, network_provider: NetworkProviders, user: Account, event: AddLiquidityEvent):
         function_purpose = f"addLiquidity"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
-        tokens = [DCDTToken(event.tokenA, 0, event.amountA), DCDTToken(event.tokenB, 0, event.amountB)]
+        tokens = [DCDTToken(event.tokenA, 0, event.amountA),
+                  DCDTToken(event.tokenB, 0, event.amountB)]
         sc_args = [
             tokens,
             event.amountAmin,
             event.amountBmin,
         ]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, 20000000, user, Address(self.address), "addLiquidity", sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, 20000000,
+                                        user, Address(self.address), "addLiquidity", sc_args)
 
     def add_initial_liquidity(self, network_provider: NetworkProviders, user: Account, event: AddLiquidityEvent):
         function_purpose = f"addInitialLiquidity"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
-        tokens = [DCDTToken(event.tokenA, 0, event.amountA), DCDTToken(event.tokenB, 0, event.amountB)]
+        tokens = [DCDTToken(event.tokenA, 0, event.amountA),
+                  DCDTToken(event.tokenB, 0, event.amountB)]
 
         sc_args = [tokens]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose,
-            network_provider.proxy,
-            20000000,
-            user,
-            Address(self.address),
-            "addInitialLiquidity",
-            sc_args,
-        )
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, 20000000,
+                                        user, Address(self.address), "addInitialLiquidity", sc_args)
 
     def remove_liquidity(self, network_provider: NetworkProviders, user: Account, event: RemoveLiquidityEvent):
         function_purpose = f"remove liquidity"
@@ -193,33 +168,43 @@ class PairContract(DEXContractInterface):
         gas_limit = 20000000
 
         tokens = [DCDTToken(self.lpToken, 0, event.amount)]
-        sc_args = [tokens, event.amountA, event.amountB]  # slippage first token  # slippage second token
+        sc_args = [tokens,
+                   event.amountA,   # slippage first token
+                   event.amountB    # slippage second token
+                   ]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "removeLiquidity", sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit,
+                                        user, Address(self.address), "removeLiquidity", sc_args)
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
         """Expecting as args:
-        type[str]: router address
-        type[str]: whitelisted owner address
-        type[str]: initial liquidity adder address (v2 required)
-        type[any]: fee percentage
-        type[any]: special fee
-        type[str..]: admin addresses (v2 required)
+            type[str]: router address
+            type[str]: whitelisted owner address
+            type[str]: initial liquidity adder address (v2 required)
+            type[any]: fee percentage
+            type[any]: special fee
+            type[str..]: admin addresses (v2 required)
         """
         function_purpose = f"Deploy pair contract"
         logger.info(function_purpose)
 
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=False, readable=True)
-
+        
         gas_limit = 200000000
 
         if len(args) < 5:
             log_step_fail(f"FAIL: Failed to deploy contract. Args list not as expected.")
             return "", ""
 
-        arguments = [self.firstToken, self.secondToken, Address(args[0]), Address(args[1]), args[3], args[4], args[2]]
+        arguments = [
+            self.firstToken,
+            self.secondToken,
+            Address(args[0]),
+            Address(args[1]),
+            args[3],
+            args[4],
+            args[2]
+        ]
 
         if self.version == PairContractVersion.V2:
             arguments.extend(args[5:])
@@ -227,22 +212,20 @@ class PairContract(DEXContractInterface):
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
 
-    def contract_upgrade(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list, no_init: bool = False
-    ):
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list, no_init: bool = False):
         """Expecting as args:
-        type[str]: router address
-        type[str]: whitelisted owner address
-        type[str]: initial liquidity adder address (v2 required)
-        type[any]: fee percentage
-        type[any]: special fee
-        type[str..]: admin addresses (v2 required)
+            type[str]: router address
+            type[str]: whitelisted owner address
+            type[str]: initial liquidity adder address (v2 required)
+            type[any]: fee percentage
+            type[any]: special fee
+            type[str..]: admin addresses (v2 required)
         """
         function_purpose = f"Upgrade pair contract"
         logger.info(function_purpose)
 
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=False, readable=True)
-
+        
         gas_limit = 200000000
 
         if no_init:
@@ -259,35 +242,32 @@ class PairContract(DEXContractInterface):
                 Address(args[1]),
                 args[3],
                 args[4],
-                args[2],
+                args[2]
             ]
 
             if self.version == PairContractVersion.V2:
                 arguments.extend(args[5:])
 
-        return upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
-        )
+        return upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                            bytecode_path, metadata, arguments)
 
     def contract_deploy_via_router(self, deployer: Account, proxy: ProxyNetworkProvider, router_contract, args: list):
-        """Expected as args:
-        type[str]: initial liquidity adder address
-        type[any]: total fee percentage
-        type[any]: special fee percentage
-        type[str..]: admin addresses
+        """ Expected as args:
+            type[str]: initial liquidity adder address
+            type[any]: total fee percentage
+            type[any]: special fee percentage
+            type[str..]: admin addresses
         """
         pair_args = [self.firstToken, self.secondToken]
         pair_args.extend(args)
         tx_hash, address = router_contract.pair_contract_deploy(deployer, proxy, pair_args)
         return tx_hash, address
 
-    def contract_upgrade_via_router(
-        self, deployer: Account, proxy: ProxyNetworkProvider, router_contract, args: list
-    ) -> str:
-        """Expected as args:
-        type[int]: total fee percentage
-        type[int]: special fee percentage
-        type[str]: initial liquidity adder
+    def contract_upgrade_via_router(self, deployer: Account, proxy: ProxyNetworkProvider, router_contract, args: list) -> str:
+        """ Expected as args:
+            type[int]: total fee percentage
+            type[int]: special fee percentage
+            type[str]: initial liquidity adder
         """
         pair_args = [self.firstToken, self.secondToken]
         pair_args.extend(args)
@@ -296,7 +276,7 @@ class PairContract(DEXContractInterface):
 
     def view_contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
         """Expecting as args:
-        type[str]: linked contract address
+            type[str]: linked contract address
         """
         function_purpose = f"Deploy view contract for pair"
         logger.info(function_purpose)
@@ -317,9 +297,9 @@ class PairContract(DEXContractInterface):
         return tx_hash, address
 
     def issue_lp_token_via_router(self, deployer: Account, proxy: ProxyNetworkProvider, router_contract, args: list):
-        """Expected as args:
-        type[str]: token display name
-        type[str]: token ticker
+        """ Expected as args:
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = f"Issue LP token via router"
         logger.info(function_purpose)
@@ -336,14 +316,16 @@ class PairContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(contract_to_whitelist)]
+        sc_args = [
+            Address(contract_to_whitelist)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "whitelist", sc_args)
 
     def add_trusted_swap_pair(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: trusted swap pair address
-        type[str]: trusted pair first token identifier
-        type[str]: trusted pair second token identifier
+        """ Expected as args:
+            type[str]: trusted swap pair address
+            type[str]: trusted pair first token identifier
+            type[str]: trusted pair second token identifier
         """
         function_purpose = f"Whitelist contract in pair"
         logger.info(function_purpose)
@@ -353,13 +335,17 @@ class PairContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), args[1], args[2]]
+        sc_args = [
+            Address(args[0]),
+            args[1],
+            args[2]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "addTrustedSwapPair", sc_args)
 
     def add_fees_collector(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: fees collector address
-        type[str]: fees cut
+        """ Expected as args:
+            type[str]: fees collector address
+            type[str]: fees cut
         """
         function_purpose = f"Setup fees collector in pair"
         logger.info(function_purpose)
@@ -368,14 +354,17 @@ class PairContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        gas_limit = 50000000
-        sc_args = [Address(args[0]), args[1]]
+        gas_limit = 5500000
+        sc_args = [
+            Address(args[0]),
+            args[1]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setupFeesCollector", sc_args)
 
     def set_fees_percents(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: total fee percent
-        type[str]: special fee percent
+        """ Expected as args:
+            type[str]: total fee percent
+            type[str]: special fee percent
         """
         function_purpose = f"Set fees in pair contract"
         logger.info(function_purpose)
@@ -384,7 +373,7 @@ class PairContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        gas_limit = 50000000
+        gas_limit = 5000000
         sc_args = args
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setFeePercents", sc_args)
 
@@ -395,9 +384,9 @@ class PairContract(DEXContractInterface):
         return tx_hash
 
     def set_fee_on_via_router(self, deployer: Account, proxy: ProxyNetworkProvider, router_contract, args: list):
-        """Expected as args:
-        type[str]: address to receive fees
-        type[str]: expected token
+        """ Expected as args:
+            type[str]: address to receive fees
+            type[str]: expected token
         """
         function_purpose = f"Set fee on via router"
         logger.info(function_purpose)
@@ -414,7 +403,9 @@ class PairContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [epoch]
+        sc_args = [
+            epoch
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLockingDeadlineEpoch", sc_args)
 
     def set_unlock_epoch(self, deployer: Account, proxy: ProxyNetworkProvider, epoch: int):
@@ -422,7 +413,9 @@ class PairContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [epoch]
+        sc_args = [
+            epoch
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setUnlockEpoch", sc_args)
 
     def set_locking_sc_address(self, deployer: Account, proxy: ProxyNetworkProvider, locking_address: str):
@@ -430,7 +423,9 @@ class PairContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(locking_address)]
+        sc_args = [
+            Address(locking_address)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLockingScAddress", sc_args)
 
     def resume(self, deployer: Account, proxy: ProxyNetworkProvider):
@@ -448,7 +443,7 @@ class PairContract(DEXContractInterface):
         gas_limit = 10000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setStateActiveNoSwaps", sc_args)
-
+    
     def get_safe_price_round_save_interval(self, proxy: ProxyNetworkProvider):
         data_fetcher = PairContractDataFetcher(Address(self.address), proxy.url)
         return data_fetcher.get_data("getSafePriceRoundSaveInterval")

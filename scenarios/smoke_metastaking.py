@@ -18,39 +18,29 @@ logger = get_logger("manual_interactor")
 
 
 def claim_rewards_for_user(metastake_contract: MetaStakingContract, user: Account) -> str:
-    token_nonce, token_balance, _ = get_token_in_account(
-        context.network_provider.proxy, user, metastake_contract.metastake_token
-    )
+    token_nonce, token_balance, _ = get_token_in_account(context.network_provider.proxy, user, metastake_contract.metastake_token)
     if token_balance == 0:
-        pytest.skip(f"No token balance for {user.address.bech32()} on {metastake_contract.address}")
+        pytest.skip(f'No token balance for {user.address.bech32()} on {metastake_contract.address}')
     tokens = [DCDTToken(metastake_contract.metastake_token, token_nonce, token_balance)]
-
+    
     return metastake_contract.claim_rewards_metastaking(context.network_provider.proxy, user, [tokens])
 
-
 def enter_metastake_for_user(metastake_contract: MetaStakingContract, user: Account) -> str:
-    token_nonce, token_balance, _ = get_token_in_account(
-        context.network_provider.proxy, user, metastake_contract.farm_token
-    )
+    token_nonce, token_balance, _ = get_token_in_account(context.network_provider.proxy, user, metastake_contract.farm_token)
     if token_balance == 0:
-        pytest.skip(f"No token balance for {user.address.bech32()} on {metastake_contract.address}")
+        pytest.skip(f'No token balance for {user.address.bech32()} on {metastake_contract.address}')
     tokens = [DCDTToken(metastake_contract.farm_token, token_nonce, token_balance)]
 
-    metastake_token_nonce, metastake_token_balance, _ = get_token_in_account(
-        context.network_provider.proxy, user, metastake_contract.metastake_token
-    )
+    metastake_token_nonce, metastake_token_balance, _ = get_token_in_account(context.network_provider.proxy, user, metastake_contract.metastake_token)
     if metastake_token_balance > 0:
         tokens.append(DCDTToken(metastake_contract.metastake_token, metastake_token_nonce, metastake_token_balance))
-
+    
     return metastake_contract.enter_metastake(context.network_provider.proxy, user, [tokens])
 
-
 def exit_metastake_for_user(metastake_contract: MetaStakingContract, user: Account) -> str:
-    token_nonce, token_balance, _ = get_token_in_account(
-        context.network_provider.proxy, user, metastake_contract.metastake_token
-    )
+    token_nonce, token_balance, _ = get_token_in_account(context.network_provider.proxy, user, metastake_contract.metastake_token)
     if token_balance == 0:
-        pytest.skip(f"No token balance for {user.address.bech32()} on {metastake_contract.address}")
+        pytest.skip(f'No token balance for {user.address.bech32()} on {metastake_contract.address}')
     tokens = [DCDTToken(metastake_contract.metastake_token, token_nonce, token_balance)]
 
     return metastake_contract.exit_metastake(context.network_provider.proxy, user, [tokens, 1, 1])

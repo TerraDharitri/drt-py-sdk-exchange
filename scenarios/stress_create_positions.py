@@ -13,15 +13,13 @@ from contracts.rewa_wrap_contract import RewaWrapContract
 from utils.logger import get_logger
 from context import Context
 from contracts.pair_contract import PairContract, AddLiquidityEvent, SwapFixedInputEvent
-from events.event_generators import (
-    generate_add_initial_liquidity_event,
-    generate_add_liquidity_event,
-    generateEnterFarmEvent,
-    generateEnterMetastakeEvent,
-    generateClaimMetastakeRewardsEvent,
-    generateExitMetastakeEvent,
-    generateExitFarmEvent,
-)
+from events.event_generators import (generate_add_initial_liquidity_event,
+                                                       generate_add_liquidity_event,
+                                                       generateEnterFarmEvent,
+                                                       generateEnterMetastakeEvent,
+                                                       generateClaimMetastakeRewardsEvent,
+                                                       generateExitMetastakeEvent,
+                                                       generateExitFarmEvent)
 from utils.contract_data_fetchers import PairContractDataFetcher
 from utils.utils_generic import log_step_pass, log_step_fail
 from ported_arrows.stress.send_token_from_minter import main as send_token_from_minter
@@ -63,10 +61,8 @@ def main(cli_args: List[str]):
         # send DEX tokens to users
         send_tokens(context)
         wait_time = 40
-        logger.info(
-            f"Minting accounts with DEX tokens done. "
-            f"Waiting for the dust to settle: {wait_time}s until execution start"
-        )
+        logger.info(f"Minting accounts with DEX tokens done. "
+                    f"Waiting for the dust to settle: {wait_time}s until execution start")
         time.sleep(wait_time)
 
     create_nonce_file(context)
@@ -108,18 +104,14 @@ def swap_tokens(context: Context):
     rewa_per_pair = rewa_to_swap // len(pair_contracts)
     pair_contract: Optional[PairContract] = None
     for pair_contract in pair_contracts:
-        swapped_token = (
-            pair_contract.firstToken
-            if wrap_contract.wrapped_token == pair_contract.secondToken
-            else pair_contract.secondToken
-        )
-        swap_event = SwapFixedInputEvent(
-            tokenA=wrap_contract.wrapped_token, amountA=rewa_per_pair, tokenB=swapped_token, amountBmin=1
-        )
-        logger.info(
-            f"Swapping {rewa_per_pair} {wrap_contract.wrapped_token} for {swapped_token} "
-            f"in pair {pair_contract.address}."
-        )
+        swapped_token = pair_contract.firstToken if wrap_contract.wrapped_token == pair_contract.secondToken else \
+            pair_contract.secondToken
+        swap_event = SwapFixedInputEvent(tokenA=wrap_contract.wrapped_token,
+                                         amountA=rewa_per_pair,
+                                         tokenB=swapped_token,
+                                         amountBmin=1)
+        logger.info(f"Swapping {rewa_per_pair} {wrap_contract.wrapped_token} for {swapped_token} "
+                    f"in pair {pair_contract.address}.")
         tx_hash = pair_contract.swap_fixed_input(context.network_provider, context.admin_account, swap_event)
         context.network_provider.check_simple_tx_status(tx_hash)
 
@@ -131,7 +123,8 @@ def send_rewa(context: Context):
     amount = nominated_amount(1)
 
     logger.info(f"Funding each account with {amount} REWA.")
-    args = [f"--proxy={proxy_url}", f"--accounts={accounts}", f"--minter={minter}", f"--value-atoms={amount}"]
+    args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
+            f'--minter={minter}', f'--value-atoms={amount}']
     send_rewa_from_minter(args)
     time.sleep(7)
     context.admin_account.sync_nonce(context.network_provider.proxy)
@@ -144,29 +137,21 @@ def send_tokens(context: Context):
 
     for token in context.deploy_structure.tokens:
         amount_on_deployer = context.network_provider.proxy.get_fungible_token_of_account(
-            context.admin_account.address, token
-        ).balance
-
+            context.admin_account.address, token).balance
+        
         if amount_on_deployer == 0:
             continue
 
         # divide the amount between all user accounts + deployer
         no_accounts = len(context.accounts.accounts) + 1
         amount = amount_on_deployer // no_accounts
-        logger.info(
-            f"Funding {no_accounts} accounts with {amount} {token} tokens each "
-            f"from a total of {amount_on_deployer}."
-        )
-        args = [
-            f"--proxy={proxy_url}",
-            f"--accounts={accounts}",
-            f"--minter={minter}",
-            f"--token={token}",
-            f"--amount-atoms={amount}",
-        ]
+        logger.info(f"Funding {no_accounts} accounts with {amount} {token} tokens each "
+                    f"from a total of {amount_on_deployer}.")
+        args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
+                f'--minter={minter}', f'--token={token}', f'--amount-atoms={amount}']
         send_token_from_minter(args)
         time.sleep(7)
-
+    
     context.admin_account.sync_nonce(context.network_provider.proxy)
 
 
@@ -178,7 +163,8 @@ def add_initial_liquidity(context: Context):
         first_token_liquidity = pair_data_fetcher.get_token_reserve(pair_contract.firstToken)
         if first_token_liquidity == 0:
             event = AddLiquidityEvent(
-                pair_contract.firstToken, nominated_amount(10), 1, pair_contract.secondToken, nominated_amount(10), 1
+                pair_contract.firstToken, nominated_amount(10), 1,
+                pair_contract.secondToken, nominated_amount(10), 1
             )
             pair_contract.add_initial_liquidity(context.network_provider, context.deployer_account, event)
             time.sleep(6)
@@ -196,11 +182,12 @@ def stress(context: Context, threads: int, repeats: int):
         for _ in range(repeats if repeats != 0 else 99999999):
             stress_per_account(context, random.choice(accounts))
     elif threads > 1:
-        """Concurential run"""
+        """ Concurential run """
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             jobs = min(threads, repeats) if repeats != 0 else threads
             finished_jobs = 0
-            futures = [executor.submit(stress_per_account, context, random.choice(accounts)) for _ in range(jobs)]
+            futures = [executor.submit(stress_per_account, context, random.choice(accounts))
+                       for _ in range(jobs)]
 
             # feed the thread workers as they complete each job
             while finished_jobs < repeats or repeats == 0:
@@ -225,9 +212,8 @@ def stress_per_account(context: Context, account: Account):
     min_time = 2
     max_time = 10
     deployer_shard = context.deployer_account.address.get_shard()
-    sleep_time = (
-        config.CROSS_SHARD_DELAY if account.address.get_shard() is not deployer_shard else config.INTRA_SHARD_DELAY
-    )
+    sleep_time = config.CROSS_SHARD_DELAY if account.address.get_shard() is not deployer_shard \
+        else config.INTRA_SHARD_DELAY
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -238,7 +224,7 @@ def stress_per_account(context: Context, account: Account):
         operation_hit = False
 
         for _ in range(1):
-            if random.randint(0, 100) <= 40:  # 40% chance
+            if random.randint(0, 100) <= 40:    # 40% chance
                 if generate_add_liquidity_event(context, account, pair_contract):
                     time.sleep(sleep_time)
                     operation_hit = True
@@ -248,18 +234,18 @@ def stress_per_account(context: Context, account: Account):
                 if generateEnterMetastakeEvent(context, account, metastaking_contract):
                     time.sleep(sleep_time)
                     operation_hit = True
-            if random.randint(0, 100) <= 70:  # 70% chance
+            if random.randint(0, 100) <= 70:    # 70% chance
                 if generateClaimMetastakeRewardsEvent(context, account, metastaking_contract):
                     time.sleep(sleep_time)
                     operation_hit = True
-            if random.randint(0, 100) <= 20:  # 20% chance
+            if random.randint(0, 100) <= 20:    # 20% chance
                 if generateExitMetastakeEvent(context, account, metastaking_contract):
                     time.sleep(sleep_time)
                     operation_hit = True
 
         if operation_hit:
             wait_time = random.randint(min_time, max_time)
-            logger.info(f"Finished repeat execution. Waiting for {wait_time}s.")
+            logger.info(f'Finished repeat execution. Waiting for {wait_time}s.')
             time.sleep(wait_time)
 
 

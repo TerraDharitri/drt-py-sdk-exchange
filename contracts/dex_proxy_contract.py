@@ -5,16 +5,11 @@ from contracts.pair_contract import PairContract
 from dharitri_py_sdk import ApiNetworkProvider, ProxyNetworkProvider, CodeMetadata
 from utils.contract_data_fetchers import ProxyContractDataFetcher
 from utils.logger import get_logger
-from utils.utils_tx import deploy, upgrade_call, endpoint_call, multi_dcdt_endpoint_call, DCDTToken
-from utils.utils_generic import log_step_fail, log_step_pass, log_substep, log_unexpected_args
-from utils.utils_chain import (
-    Account,
-    WrapperAddress as Address,
-    base64_to_hex,
-    dec_to_padded_hex,
-    decode_merged_attributes,
-    hex_to_string,
-)
+from utils.utils_tx import deploy, upgrade_call, \
+    endpoint_call, multi_dcdt_endpoint_call, DCDTToken
+from utils.utils_generic import log_step_fail, log_step_pass, log_substep, \
+    log_unexpected_args
+from utils.utils_chain import Account, WrapperAddress as Address, base64_to_hex, dec_to_padded_hex, decode_merged_attributes, hex_to_string
 
 from utils.decoding_structures import LKMOA_ATTRIBUTES, XMOA_ATTRIBUTES, XMOAFARM_ATTRIBUTES, XMOALP_ATTRIBUTES
 
@@ -22,18 +17,9 @@ logger = get_logger(__name__)
 
 
 class DexProxyAddLiquidityEvent:
-    def __init__(
-        self,
-        pairContract: PairContract,
-        tokenA: str,
-        nonceA: int,
-        amountA: int,
-        amountAmin: int,
-        tokenB: str,
-        nonceB: int,
-        amountB: int,
-        amountBmin: int,
-    ):
+    def __init__(self, pairContract: PairContract,
+                 tokenA: str, nonceA: int, amountA: int, amountAmin: int,
+                 tokenB: str, nonceB: int, amountB: int, amountBmin: int):
         self.pairContract = pairContract
         self.tokenA = tokenA
         self.nonceA = nonceA
@@ -55,16 +41,9 @@ class DexProxyRemoveLiquidityEvent:
 
 
 class DexProxyEnterFarmEvent:
-    def __init__(
-        self,
-        farmContract: FarmContract,
-        farming_token: str,
-        farming_nonce: int,
-        farming_amount,
-        farm_token: str,
-        farm_nonce: int,
-        farm_amount,
-    ):
+    def __init__(self, farmContract: FarmContract,
+                 farming_token: str, farming_nonce: int, farming_amount,
+                 farm_token: str, farm_nonce: int, farm_amount):
         self.farmContract = farmContract
         self.farming_tk = farming_token
         self.farming_tk_nonce = farming_nonce
@@ -100,15 +79,8 @@ class DexProxyCompoundRewardsEvent:
 
 
 class DexProxyContract(DEXContractInterface):
-    def __init__(
-        self,
-        locked_tokens: list,
-        token: str,
-        version: ProxyContractVersion,
-        address: str = "",
-        proxy_lp_token: str = "",
-        proxy_farm_token: str = "",
-    ):
+    def __init__(self, locked_tokens: list, token: str, version: ProxyContractVersion,
+                 address: str = "", proxy_lp_token: str = "", proxy_farm_token: str = ""):
         self.address = address
         self.proxy_lp_token = proxy_lp_token
         self.proxy_farm_token = proxy_farm_token
@@ -123,23 +95,24 @@ class DexProxyContract(DEXContractInterface):
             "proxy_farm_token": self.proxy_farm_token,
             "proxy_lp_token": self.proxy_lp_token,
             "address": self.address,
-            "version": self.version.value,
+            "version": self.version.value
         }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return DexProxyContract(
-            token=config_dict["token"],
-            locked_tokens=config_dict["locked_tokens"],
-            proxy_farm_token=config_dict["proxy_farm_token"],
-            proxy_lp_token=config_dict["proxy_lp_token"],
-            address=config_dict["address"],
-            version=ProxyContractVersion(config_dict["version"]),
-        )
-
+        return DexProxyContract(token=config_dict['token'],
+                                locked_tokens=config_dict['locked_tokens'],
+                                proxy_farm_token=config_dict['proxy_farm_token'],
+                                proxy_lp_token=config_dict['proxy_lp_token'],
+                                address=config_dict['address'],
+                                version=ProxyContractVersion(config_dict['version']))
+    
     def get_contract_tokens(self) -> list[str]:
-        return [self.proxy_lp_token, self.proxy_farm_token]
+        return [
+            self.proxy_lp_token,
+            self.proxy_farm_token
+        ]
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -156,17 +129,20 @@ class DexProxyContract(DEXContractInterface):
         function_purpose = "add liquidity via proxy"
         logger.debug(f"Executing {function_purpose} for user {user.address} with event {event.__dict__}")
 
-        tokens = [
-            DCDTToken(event.tokenA, event.nonceA, event.amountA),
-            DCDTToken(event.tokenB, event.nonceB, event.amountB),
-        ]
+        tokens = [DCDTToken(event.tokenA, event.nonceA, event.amountA),
+                  DCDTToken(event.tokenB, event.nonceB, event.amountB)
+                  ]
 
-        sc_args = [tokens, Address(event.pairContract.address), event.amountAmin, event.amountBmin]
+        sc_args = [
+            tokens,
+            Address(event.pairContract.address),
+            event.amountAmin,
+            event.amountBmin
+        ]
         gas_limit = 40000000
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "addLiquidityProxy", sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address),
+                                        "addLiquidityProxy", sc_args)
 
     def remove_liquidity_proxy(self, user: Account, proxy: ProxyNetworkProvider, event: DexProxyRemoveLiquidityEvent):
         function_purpose = "remove liquidity via proxy"
@@ -174,12 +150,16 @@ class DexProxyContract(DEXContractInterface):
 
         tokens = [DCDTToken(self.proxy_lp_token, event.nonce, event.amount)]
 
-        sc_args = [tokens, Address(event.pairContract.address), event.amountA, event.amountB]
+        sc_args = [
+            tokens,
+            Address(event.pairContract.address),
+            event.amountA,
+            event.amountB
+        ]
         gas_limit = 40000000
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "removeLiquidityProxy", sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address),
+                                        "removeLiquidityProxy", sc_args)
 
     def enter_farm_proxy(self, user: Account, proxy: ProxyNetworkProvider, event: DexProxyEnterFarmEvent):
         function_purpose = "enter farm via proxy"
@@ -191,10 +171,12 @@ class DexProxyContract(DEXContractInterface):
         if event.farm_tk != "":
             tokens.append(DCDTToken(event.farm_tk, event.farm_tk_nonce, event.farm_tk_amount))
 
-        sc_args = [tokens, Address(event.farmContract.address)]
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "enterFarmProxy", sc_args
-        )
+        sc_args = [
+            tokens,
+            Address(event.farmContract.address)
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address),
+                                        "enterFarmProxy", sc_args)
 
     def exit_farm_proxy(self, user: Account, proxy: ProxyNetworkProvider, event: DexProxyExitFarmEvent):
         function_purpose = "exit farm via proxy"
@@ -204,10 +186,12 @@ class DexProxyContract(DEXContractInterface):
 
         tokens = [DCDTToken(event.token, event.nonce, event.amount)]
 
-        sc_args = [tokens, Address(event.farmContract.address)]
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "exitFarmProxy", sc_args
-        )
+        sc_args = [
+            tokens,
+            Address(event.farmContract.address)
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address),
+                                        "exitFarmProxy", sc_args)
 
     def claim_rewards_proxy(self, user: Account, proxy: ProxyNetworkProvider, event: DexProxyClaimRewardsEvent):
         function_purpose = "claim rewards via proxy"
@@ -216,15 +200,17 @@ class DexProxyContract(DEXContractInterface):
         gas_limit = 50000000
 
         tokens = [DCDTToken(event.token, event.nonce, event.amount)]
-        sc_args = [tokens, Address(event.farmContract.address)]
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "claimRewardsProxy", sc_args
-        )
-
+        sc_args = [
+            tokens,
+            Address(event.farmContract.address)
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address),
+                                        "claimRewardsProxy", sc_args)
+    
     def increase_proxy_lp_token_energy(self, user: Account, proxy: ProxyNetworkProvider, args: list = []):
         """Expecting as args:
-        type[List[DCDTTokens]]: tokens to increase energy for
-        type[int]: lock epochs
+            type[List[DCDTTokens]]: tokens to increase energy for
+            type[int]: lock epochs
         """
         function_purpose = "increase proxy pair token energy"
         logger.info(function_purpose)
@@ -234,14 +220,12 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "increaseProxyPairTokenEnergy", args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address), "increaseProxyPairTokenEnergy", args)
+    
     def increase_proxy_farm_token_energy(self, user: Account, proxy: ProxyNetworkProvider, args: list = []):
         """Expecting as args:
-        type[List[DCDTTokens]]: tokens to increase energy for
-        type[int]: lock epochs
+            type[List[DCDTTokens]]: tokens to increase energy for
+            type[int]: lock epochs
         """
         function_purpose = "increase proxy farm token energy"
         logger.info(function_purpose)
@@ -251,18 +235,16 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "increaseProxyFarmTokenEnergy", args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address), "increaseProxyFarmTokenEnergy", args)
+    
     def destroy_proxy_farm_token(self, user: Account, proxy: ProxyNetworkProvider, args: list = []):
         """Expecting as args:
-        type[List[DCDTTokens]]: tokens to destroy
-        type[str]: farm address
-        type[str]: pair address
-        type[int]: first token slippage
-        type[int]: second token slippage
-        optional type[str]: original caller
+            type[List[DCDTTokens]]: tokens to destroy
+            type[str]: farm address
+            type[str]: pair address
+            type[int]: first token slippage
+            type[int]: second token slippage
+            optional type[str]: original caller
         """
         function_purpose = "destroy proxy farm token"
         logger.info(function_purpose)
@@ -272,14 +254,12 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "destroyFarmProxy", args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address), "destroyFarmProxy", args)
+    
     def merge_proxy_farm_tokens(self, user: Account, proxy: ProxyNetworkProvider, args: list = []):
         """Expecting as args:
-        type[List[DCDTTokens]]: tokens to merge
-        type[str]: farm address
+            type[List[DCDTTokens]]: tokens to merge
+            type[str]: farm address
         """
         function_purpose = "merge proxy farm tokens"
         logger.info(function_purpose)
@@ -289,13 +269,11 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "mergeWrappedFarmTokens", args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address), "mergeWrappedFarmTokens", args)
+    
     def merge_proxy_lp_tokens(self, user: Account, proxy: ProxyNetworkProvider, args: list = []):
         """Expecting as args:
-        type[List[DCDTTokens]]: tokens to merge
+            type[List[DCDTTokens]]: tokens to merge
         """
         function_purpose = "merge proxy lp tokens"
         logger.info(function_purpose)
@@ -305,9 +283,7 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "mergeWrappedLpTokens", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user, Address(self.address), "mergeWrappedLpTokens", args)
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = []):
         """Expecting as args:
@@ -321,7 +297,8 @@ class DexProxyContract(DEXContractInterface):
             return "", ""
 
         if len(self.locked_tokens) != len(args[0]):
-            log_step_fail(f"FAIL: Failed to deploy contract. " f"Mismatch between locked tokens and factory addresses.")
+            log_step_fail(f"FAIL: Failed to deploy contract. "
+                                 f"Mismatch between locked tokens and factory addresses.")
             return "", ""
 
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
@@ -335,9 +312,8 @@ class DexProxyContract(DEXContractInterface):
 
         return tx_hash, address
 
-    def contract_upgrade(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = [], no_init: bool = False
-    ):
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path,
+                         args: list = [], no_init: bool = False):
         """Expecting as args:
         type[str]: old_locked_token_id
         type[str]: old_factory_address
@@ -355,18 +331,20 @@ class DexProxyContract(DEXContractInterface):
         if no_init:
             arguments = []
         else:
-            arguments = [args[0], Address(args[1])]
+            arguments = [
+                args[0],
+                Address(args[1])
+            ]
 
-        tx_hash = upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
-        )
+        tx_hash = upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                               bytecode_path, metadata, arguments)
 
         return tx_hash
 
     def register_proxy_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """Expecting as args:
-        type[str]: token display name
-        type[str]: token ticker
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = "Register proxy farm token"
         logger.info(function_purpose)
@@ -377,21 +355,18 @@ class DexProxyContract(DEXContractInterface):
             return tx_hash
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "registerProxyFarm",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "registerProxyFarm", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def register_proxy_lp_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """Expecting as args:
-        type[str]: token display name
-        type[str]: token ticker
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = "Register proxy lp token"
         logger.info(function_purpose)
@@ -402,22 +377,18 @@ class DexProxyContract(DEXContractInterface):
             return tx_hash
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "registerProxyPair",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "registerProxyPair", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     """Expecting as args:
     type[str]: token id
     type[str]: contract address to assign roles to
     """
-
     def set_local_roles_proxy_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         function_purpose = "Set local roles for proxy token"
         logger.info(function_purpose)
@@ -427,7 +398,11 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 3, 4, 5]
+        sc_args = [
+            args[0],
+            args[1],
+            3, 4, 5
+        ]
 
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLocalRoles", sc_args)
 
@@ -440,9 +415,8 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 50000000
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setEnergyFactoryAddress", [energy_address]
-        )
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setEnergyFactoryAddress",
+                             [energy_address])
 
     def add_pair_to_intermediate(self, deployer: Account, proxy: ProxyNetworkProvider, pair_address: str):
         function_purpose = "Add pair to intermediate in proxy contract"
@@ -464,10 +438,8 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setTransferRoleLockedLpToken", [address]
-        )
-
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleLockedLpToken", [address])
+    
     def set_transfer_role_locked_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
         function_purpose = "Set transfer role on address for farm token; legacy endpoint"
         logger.info(function_purpose)
@@ -477,10 +449,8 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setTransferRoleLockedFarmToken", [address]
-        )
-
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleLockedFarmToken", [address])
+    
     def set_transfer_role_wrapped_lp_token(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
         function_purpose = "Set transfer role on address for lp token"
         logger.info(function_purpose)
@@ -490,10 +460,8 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setTransferRoleWrappedLpToken", [address]
-        )
-
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleWrappedLpToken", [address])
+    
     def set_transfer_role_wrapped_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
         function_purpose = "Set transfer role on address for farm token"
         logger.info(function_purpose)
@@ -503,10 +471,8 @@ class DexProxyContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setTransferRoleWrappedFarmToken", [address]
-        )
-
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleWrappedFarmToken", [address])
+    
     def add_farm_to_intermediate(self, deployer: Account, proxy: ProxyNetworkProvider, farm_address: str):
         function_purpose = "Add farm to intermediate in proxy contract"
         logger.info(function_purpose)
@@ -517,11 +483,11 @@ class DexProxyContract(DEXContractInterface):
 
         gas_limit = 50000000
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "addFarmToIntermediate", [farm_address])
-
+    
     def add_contract_to_whitelist(self, deployer: Account, proxy: ProxyNetworkProvider, whitelisted_sc_address: str):
         function_purpose = "Add contract to proxy dex whitelist"
         logger.info(function_purpose)
-
+        
         gas_limit = 30000000
         sc_args = [whitelisted_sc_address]
         logger.debug(f"Arguments: {sc_args}")
@@ -542,49 +508,37 @@ class DexProxyContract(DEXContractInterface):
         farm_token_on_network = api.get_non_fungible_token(self.proxy_farm_token, farm_token_nonce)
 
         # Decode the farm token attributes
-        decoded_xmoa_farm_attributes = decode_merged_attributes(
-            base64_to_hex(farm_token_on_network.attributes), XMOAFARM_ATTRIBUTES
-        )
+        decoded_xmoa_farm_attributes = decode_merged_attributes(base64_to_hex(farm_token_on_network.attributes), XMOAFARM_ATTRIBUTES)
         logger.debug(decoded_xmoa_farm_attributes)
 
         # Decode the LP token attributes & underlying locked token
-        xmoa_lp_token_id = decoded_xmoa_farm_attributes.get("proxy_token_id")
+        xmoa_lp_token_id = decoded_xmoa_farm_attributes.get('proxy_token_id')
         if xmoa_lp_token_id != self.proxy_lp_token:
             logger.error(f"Wrong token contained by XMOAFARM token: {xmoa_lp_token_id} expected {self.proxy_lp_token}")
 
-        decoded_xmoa_lp_attributes, decoded_lk_token_attributes = self.get_all_decoded_lp_token_attributes_from_api(
-            api, decoded_xmoa_farm_attributes.get("proxy_token_nonce")
-        )
+        decoded_xmoa_lp_attributes, decoded_lk_token_attributes = self.get_all_decoded_lp_token_attributes_from_api(api, decoded_xmoa_farm_attributes.get('proxy_token_nonce'))
 
         return decoded_xmoa_farm_attributes, decoded_xmoa_lp_attributes, decoded_lk_token_attributes
-
+    
     def get_all_decoded_lp_token_attributes_from_api(self, api: ApiNetworkProvider, lp_token_nonce: int):
         # Decode the LP token attributes
         lp_token_on_network = api.get_non_fungible_token(self.proxy_lp_token, lp_token_nonce)
 
-        decoded_xmoa_lp_attributes = decode_merged_attributes(
-            base64_to_hex(lp_token_on_network.attributes), XMOALP_ATTRIBUTES
-        )
+        decoded_xmoa_lp_attributes = decode_merged_attributes(base64_to_hex(lp_token_on_network.attributes), XMOALP_ATTRIBUTES)
         logger.debug(decoded_xmoa_lp_attributes)
 
         # Decode the XMOA token attributes
-        xmoa_token_id = decoded_xmoa_lp_attributes.get("locked_tokens_id")
+        xmoa_token_id = decoded_xmoa_lp_attributes.get('locked_tokens_id')
 
         if xmoa_token_id not in self.locked_tokens:
             logger.error(f"Locked token not found in locked tokens: {xmoa_token_id}")
 
-        xmoa_token_on_network = api.get_non_fungible_token(
-            xmoa_token_id, decoded_xmoa_lp_attributes.get("locked_tokens_nonce")
-        )
+        xmoa_token_on_network = api.get_non_fungible_token(xmoa_token_id, decoded_xmoa_lp_attributes.get('locked_tokens_nonce'))
 
         if "XMOA" in xmoa_token_id:
-            decoded_lk_token_attributes = decode_merged_attributes(
-                base64_to_hex(xmoa_token_on_network.attributes), XMOA_ATTRIBUTES
-            )
+            decoded_lk_token_attributes = decode_merged_attributes(base64_to_hex(xmoa_token_on_network.attributes), XMOA_ATTRIBUTES)
         if "LKMOA" in xmoa_token_id:
-            decoded_lk_token_attributes = decode_merged_attributes(
-                base64_to_hex(xmoa_token_on_network.attributes), LKMOA_ATTRIBUTES
-            )
+            decoded_lk_token_attributes = decode_merged_attributes(base64_to_hex(xmoa_token_on_network.attributes), LKMOA_ATTRIBUTES)
         logger.debug(decoded_lk_token_attributes)
 
         return decoded_xmoa_lp_attributes, decoded_lk_token_attributes

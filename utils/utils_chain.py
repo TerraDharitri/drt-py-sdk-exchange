@@ -7,16 +7,9 @@ from os import path
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
-from dharitri_py_sdk import (
-    Address,
-    AddressComputer,
-    Message,
-    MessageComputer,
-    ProxyNetworkProvider,
-    Transaction,
-    TransactionComputer,
-    UserSigner,
-)
+from dharitri_py_sdk import (Address, AddressComputer, Message, MessageComputer,
+                            ProxyNetworkProvider, Transaction,
+                            TransactionComputer, UserSigner)
 from dharitri_py_sdk.wallet.pem_entry import PemEntry
 
 from utils import utils_generic
@@ -31,10 +24,10 @@ class WrapperAddress(Address):
         super().__init__(self_instance.pubkey, "drt")
 
     @classmethod
-    def from_hex(cls, value: str, hrp: str = "drt") -> "Address":
+    def from_hex(cls, value: str, hrp: str = "drt") -> 'Address':
         self_instance = Address.new_from_hex(value, hrp)
         return cls(self_instance.bech32())
-
+    
     def get_shard(self) -> int:
         return AddressComputer().get_shard_of_address(self)
 
@@ -46,15 +39,13 @@ class WrapperAddress(Address):
 
 
 class Account:
-    def __init__(
-        self,
-        address: Optional[str] = None,
-        pem_file: Optional[str] = None,
-        pem_index: int = 0,
-        key_file: str = "",
-        password: str = "",
-        ledger: bool = False,
-    ):
+    def __init__(self,
+                 address: Optional[str] = None,
+                 pem_file: Optional[str] = None,
+                 pem_index: int = 0,
+                 key_file: str = "",
+                 password: str = "",
+                 ledger: bool = False):
         self.address = WrapperAddress(address) if address else None
         self.pem_file = pem_file
         self.pem_index = int(pem_index)
@@ -79,7 +70,7 @@ class Account:
         assert self.signer is not None
         tx_computer = TransactionComputer()
         return self.signer.sign(tx_computer.compute_bytes_for_signing(transaction))
-
+    
     def sign_message(self, data: bytes) -> bytes:
         assert self.signer is not None
         message = Message(data)
@@ -87,11 +78,9 @@ class Account:
         serialized_message = msg_computer.compute_bytes_for_signing(message)
         signature = self.signer.sign(serialized_message)
 
-        logger.debug(
-            f"Account.sign_message(): raw_data_to_sign = {data.hex()}, message_data_to_sign = {serialized_message.hex()}, signature = {signature.hex()}"
-        )
+        logger.debug(f"Account.sign_message(): raw_data_to_sign = {data.hex()}, message_data_to_sign = {serialized_message.hex()}, signature = {signature.hex()}")
         return signature
-
+    
     @classmethod
     def from_file(cls, file: str, index: int = 0, password: str = ""):
         """Returns an Account object from either a pem or keystore.
@@ -193,7 +182,7 @@ def prevent_spam_crash_numbat_proxy_go():
 
 
 def hex_to_base64(s: str) -> str:
-    return base64.b64encode(s.encode("hex"))
+    return base64.b64encode(s.encode('hex'))
 
 
 def base64_to_hex(b: str) -> str:
@@ -201,11 +190,11 @@ def base64_to_hex(b: str) -> str:
 
 
 def string_to_base64(s: str) -> str:
-    return base64.b64encode(s.encode("utf-8"))
+    return base64.b64encode(s.encode('utf-8'))
 
 
 def base64_to_string(b: str) -> str:
-    return base64.b64decode(b).decode("utf-8")
+    return base64.b64decode(b).decode('utf-8')
 
 
 def denominated_amount(amount: int) -> int:
@@ -236,11 +225,11 @@ def get_bytecode_codehash(bytecode_path: Path) -> str:
 
 def _get_all_dcdts_for_account(address: str, proxy: ProxyNetworkProvider):
     # TODO: this is only to support old code that needs to be refactored to drtpy
-    url = f"address/{address}/dcdt"
+    url = f'address/{address}/dcdt'
     response = proxy.do_get_generic(url)
     prevent_spam_crash_numbat_proxy_go()
 
-    dcdts = response.get("dcdts")
+    dcdts = response.get('dcdts')
     return dcdts
 
 
@@ -260,8 +249,8 @@ def get_all_token_nonces_details_for_account(in_token: str, address: str, proxy:
     for token in dcdts:
         if in_token not in token:
             continue
-        if "nonce" not in dcdts[token]:
-            dcdts[token]["nonce"] = 0
+        if 'nonce' not in dcdts[token]:
+            dcdts[token]['nonce'] = 0
         filtered_tokens_list.append(dcdts[token])
 
     return filtered_tokens_list
@@ -276,16 +265,17 @@ def get_current_tokens_for_address(address: Address, proxy: ProxyNetworkProvider
     tokens_dict = {}
 
     for token in dcdts:
-        if token.get("nonce", "") == "":
-            token["nonce"] = 0
-        tokens_dict[token["identifier"]] = {"nonce": token["nonce"], "balance": token["balance"]}
+        if token.get('nonce', '') == '':
+            token['nonce'] = 0
+        tokens_dict[token['identifier']] = {
+            'nonce': token['nonce'],
+            'balance': token['balance']
+        }
 
     return tokens_dict
 
 
-def get_token_details_for_address(
-    in_token: str, address: str, proxy: ProxyNetworkProvider, underlying_tk: str = ""
-) -> Tuple[int, int, str]:
+def get_token_details_for_address(in_token: str, address: str, proxy: ProxyNetworkProvider, underlying_tk: str = "") -> Tuple[int, int, str]:
     """Returns nonce, amount, attributes_hex"""
     # TODO: This is a temporary adaptor between new specs of drtpy sdk and old specs of the rest of the code.
     prevent_spam_crash_numbat_proxy_go()
@@ -296,18 +286,18 @@ def get_token_details_for_address(
             continue
 
         attributes_hex = ""
-        if "attributes" in tokens[token]:
-            attributes_hex = base64_to_hex(tokens[token]["attributes"])
+        if 'attributes' in tokens[token]:
+            attributes_hex = base64_to_hex(tokens[token]['attributes'])
 
         underlying_tk_exists = False
         if underlying_tk:
-            underlying_tk_hex = underlying_tk.encode("utf-8").hex()
+            underlying_tk_hex = underlying_tk.encode('utf-8').hex()
             if underlying_tk_hex in attributes_hex:
                 underlying_tk_exists = True
 
         if underlying_tk == "" or underlying_tk_exists:
-            nonce = tokens[token]["nonce"] if "nonce" in tokens[token] else 0
-            amount = int(tokens[token]["balance"])
+            nonce = tokens[token]['nonce'] if "nonce" in tokens[token] else 0
+            amount = int(tokens[token]['balance'])
             return nonce, amount, attributes_hex
 
     print("Token not found:", in_token)
@@ -332,14 +322,14 @@ def get_account_key(address_bech32: str, key_hex: str, proxy: ProxyNetworkProvid
         resource_url = f"address/{address_bech32}/key/{key_hex}"
     else:
         resource_url = f"address/{address_bech32}/key/{key_hex}?blockNonce={block_number}"
-
+    
     try:
         response = proxy.do_get_generic(resource_url)
         value = response.get("value", "")
     except Exception as e:
         logger.error(f"Error getting account key: {e}")
         value = ""
-
+        
     return value
 
 
@@ -377,7 +367,7 @@ def decode_merged_attributes(attributes_hex: str, decode_struct: dict) -> dict:
         if payload_size:
             result, _, index = fixed_length_primitive(attributes, index, payload_size)
         return result, index
-
+    
     def bigint(attributes: str, start_index: int):
         payload_size, _, index = fixed_length_primitive(attributes, start_index, 4)
         result = 0
@@ -393,7 +383,7 @@ def decode_merged_attributes(attributes_hex: str, decode_struct: dict) -> dict:
             _, result, index = fixed_length_primitive(attributes, index, payload_size)
             result_string = bytearray.fromhex(result).decode()
         return result_string, index
-
+    
     def address(attributes: str, start_index: int):
         _, result, index = fixed_length_primitive(attributes, start_index, 32)
         bech32 = Address.new_from_hex(result, "drt").to_bech32()
@@ -401,16 +391,14 @@ def decode_merged_attributes(attributes_hex: str, decode_struct: dict) -> dict:
 
     results_dict = {}
     sliding_index = 0
-    implemented_primitives = {
-        "u8": u8,
-        "u16": u16,
-        "u32": u32,
-        "u64": u64,
-        "biguint": biguint,
-        "bigint": bigint,
-        "string": string,
-        "address": address,
-    }
+    implemented_primitives = {'u8': u8,
+                              'u16': u16,
+                              'u32': u32,
+                              'u64': u64,
+                              'biguint': biguint,
+                              'bigint': bigint,
+                              'string': string,
+                              'address': address}
 
     for key, primitive in decode_struct.items():
         if type(primitive) is dict:
@@ -420,8 +408,7 @@ def decode_merged_attributes(attributes_hex: str, decode_struct: dict) -> dict:
             for field_key, field_primitive in list_decode_fields.items():
                 if field_primitive in implemented_primitives:
                     decoded_result, sliding_index = implemented_primitives[field_primitive](
-                        attributes_hex, sliding_index
-                    )
+                        attributes_hex, sliding_index)
                     decoded_list_fields[field_key] = decoded_result
 
             results_dict[key] = decoded_list_fields
@@ -458,7 +445,10 @@ def encode_merged_attributes(encode_data: dict, encode_struct: dict):
         hex_data_length = f"{data_length:0{padding_length}X}"
         return f"{hex_data_length}{hex_data}"
 
-    implemented_primitives = {"u8": u8, "u64": u64, "biguint": biguint, "string": string}
+    implemented_primitives = {'u8': u8,
+                              'u64': u64,
+                              'biguint': biguint,
+                              'string': string}
     encoded_data = ""
     for key, primitive in encode_struct.items():
         if primitive in implemented_primitives:
@@ -469,24 +459,18 @@ def encode_merged_attributes(encode_data: dict, encode_struct: dict):
 
 def log_explorer(proxy: str, name: str, path: str, details: str):
     networks = {
-        "https://testnet-gateway.dharitri.org": (
-            "DharitrI Testnet Explorer",
-            "https://testnet-explorer.dharitri.org",
-        ),
-        "https://devnet-gateway.dharitri.org": ("DharitrI Devnet Explorer", "https://devnet-explorer.dharitri.org"),
-        "https://gateway.dharitri.org": ("DharitrI Mainnet Explorer", "https://explorer.dharitri.org"),
-        "https://proxy-shadowfork-one.numbat.ro": (
-            "DRT SF1 Explorer",
-            "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-one",
-        ),
-        "https://proxy-shadowfork-three.numbat.ro": (
-            "DRT SF3 Explorer",
-            "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-three",
-        ),
-        "https://proxy-shadowfork-four.numbat.ro": (
-            "DRT SF4 Explorer",
-            "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-four",
-        ),
+        "https://testnet-gateway.dharitri.org":
+            ("DharitrI Testnet Explorer", "https://testnet-explorer.dharitri.org"),
+        "https://devnet-gateway.dharitri.org":
+            ("DharitrI Devnet Explorer", "https://devnet-explorer.dharitri.org"),
+        "https://gateway.dharitri.org":
+            ("DharitrI Mainnet Explorer", "https://explorer.dharitri.org"),
+        "https://proxy-shadowfork-one.numbat.ro":
+            ("DRT SF1 Explorer", "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-one"),
+        "https://proxy-shadowfork-three.numbat.ro":
+            ("DRT SF3 Explorer", "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-three"),
+        "https://proxy-shadowfork-four.numbat.ro":
+            ("DRT SF4 Explorer", "https://testnet.internal-explorer.dharitri.org/testnet-tc-shadowfork-four"),
     }
     try:
         explorer_name, explorer_url = networks[proxy]

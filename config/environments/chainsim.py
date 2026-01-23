@@ -3,7 +3,7 @@ from .base import BaseEnvironmentSettings
 
 class ChainSimSettings(BaseEnvironmentSettings):
     """Chain simulator environment settings."""
-
+    
     # Override defaults for chain simulator
     DEFAULT_PROXY: str = "http://localhost:8085"
     DEFAULT_API: str = "http://localhost:3001"

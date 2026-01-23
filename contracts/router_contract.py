@@ -17,13 +17,17 @@ class RouterContract(DEXContractInterface):
         self.version = version
 
     def get_config_dict(self) -> dict:
-        output_dict = {"address": self.address, "version": self.version.value}
+        output_dict = {
+            "address": self.address,
+            "version": self.version.value
+        }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return RouterContract(address=config_dict["address"], version=RouterContractVersion(config_dict["version"]))
-
+        return RouterContract(address=config_dict['address'],
+                              version=RouterContractVersion(config_dict['version']))
+    
     def get_contract_tokens(self) -> list[str]:
         return []
 
@@ -45,7 +49,9 @@ class RouterContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return "", ""
 
-        arguments = [Address(args[0])]
+        arguments = [
+            Address(args[0])
+        ]
 
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
@@ -57,15 +63,14 @@ class RouterContract(DEXContractInterface):
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
         gas_limit = 200000000
 
-        tx_hash = upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, []
-        )
+        tx_hash = upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                               bytecode_path, metadata, [])
 
         return tx_hash
 
     def add_common_tokens_for_user_pairs(self, owner: Account, proxy: ProxyNetworkProvider, *tokens):
         """Expecting as args:
-        type[str..]: common token IDs
+            type[str..]: common token IDs
         """
         function_purpose = f"Add common tokens for user pairs"
         logger.info(function_purpose)
@@ -77,10 +82,10 @@ class RouterContract(DEXContractInterface):
             sc_args.append(token)
 
         return endpoint_call(proxy, gas_limit, owner, Address(self.address), "addCommonTokensForUserPairs", sc_args)
-
+    
     def remove_common_tokens_for_user_pairs(self, owner: Account, proxy: ProxyNetworkProvider, *tokens):
         """Expecting as args:
-        type[str..]: common token IDs
+            type[str..]: common token IDs
         """
         function_purpose = f"Remove common tokens for user pairs"
         logger.info(function_purpose)
@@ -95,10 +100,10 @@ class RouterContract(DEXContractInterface):
 
     def config_enable_by_user_parameters(self, deployer: Account, proxy: ProxyNetworkProvider, **kargs):
         """Expecting as args:
-        type[str]: common_token_id
-        type[str]: locked_token_id
-        type[int]: min_locked_token_value
-        type[int]: min_lock_period_epochs
+            type[str]: common_token_id
+            type[str]: locked_token_id
+            type[int]: min_locked_token_value
+            type[int]: min_lock_period_epochs
         """
         function_purpose = f"Add enable config for common token"
         logger.info(function_purpose)
@@ -106,22 +111,22 @@ class RouterContract(DEXContractInterface):
         gas_limit = 100000000
 
         sc_args = [
-            kargs["common_token_id"],
-            kargs["locked_token_id"],
-            kargs["min_locked_token_value"],
-            kargs["min_lock_period_epochs"],
+            kargs['common_token_id'],
+            kargs['locked_token_id'],
+            kargs['min_locked_token_value'],
+            kargs['min_lock_period_epochs']
         ]
 
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "configEnableByUserParameters", sc_args)
 
     def pair_contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """Expecting as args:
-        type[str]: first pair token
-        type[str]: second pair token
-        type[str]: address of initial liquidity adder
-        type[str]: total fee percentage
-        type[str]: special fee percentage
-        type[str..]: admin addresses (v2 only)
+            type[str]: first pair token
+            type[str]: second pair token
+            type[str]: address of initial liquidity adder
+            type[str]: total fee percentage
+            type[str]: special fee percentage
+            type[str..]: admin addresses (v2 only)
         """
         function_purpose = f"Deploy pair via router"
         logger.info(function_purpose)
@@ -133,7 +138,13 @@ class RouterContract(DEXContractInterface):
             return address, tx_hash
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], Address(args[2]), args[3], args[4]]
+        sc_args = [
+            args[0],
+            args[1],
+            Address(args[2]),
+            args[3],
+            args[4]
+        ]
 
         if self.version == RouterContractVersion.V2:
             sc_args.extend(args[5:])
@@ -147,7 +158,7 @@ class RouterContract(DEXContractInterface):
         return tx_hash, address
 
     def pair_contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, args: list) -> str:
-        """Expected as args:
+        """ Expected as args:
         type[str]: first token id
         type[str]: second token id
         """
@@ -168,10 +179,10 @@ class RouterContract(DEXContractInterface):
         return tx_hash
 
     def issue_lp_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: pair address
-        type[str]: lp token name
-        type[str]: lp token ticker
+        """ Expected as args:
+            type[str]: pair address
+            type[str]: lp token name
+            type[str]: lp token ticker
         """
         function_purpose = f"Issue LP token"
         logger.info(function_purpose)
@@ -181,30 +192,29 @@ class RouterContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), args[1], args[2]]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "issueLpToken",
-            sc_args,
-            value=config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        sc_args = [
+            Address(args[0]),
+            args[1],
+            args[2]
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "issueLpToken", sc_args,
+                             value=config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def set_lp_token_local_roles(self, deployer: Account, proxy: ProxyNetworkProvider, pair_contract: str):
         function_purpose = f"Set LP token local roles"
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(pair_contract)]
+        sc_args = [
+            Address(pair_contract)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLocalRoles", sc_args)
 
     def set_fee_on(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: pair address to send fees
-        type[str]: address to receive fees
-        type[str]: expected token
+        """ Expected as args:
+            type[str]: pair address to send fees
+            type[str]: address to receive fees
+            type[str]: expected token
         """
         function_purpose = f"Set fee on for pool"
         logger.info(function_purpose)
@@ -214,14 +224,18 @@ class RouterContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), Address(args[1]), args[2]]
+        sc_args = [
+            Address(args[0]),
+            Address(args[1]),
+            args[2]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setFeeOn", sc_args)
-
+    
     def set_fee_off(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: pair address to send fees
-        type[str]: address to receive fees
-        type[str]: expected token
+        """ Expected as args:
+            type[str]: pair address to send fees
+            type[str]: address to receive fees
+            type[str]: expected token
         """
         function_purpose = f"Set fee off for pool"
         logger.info(function_purpose)
@@ -231,7 +245,11 @@ class RouterContract(DEXContractInterface):
             return ""
 
         gas_limit = 100000000
-        sc_args = [Address(args[0]), Address(args[1]), args[2]]
+        sc_args = [
+            Address(args[0]),
+            Address(args[1]),
+            args[2]
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setFeeOff", sc_args)
 
     def pair_contract_pause(self, deployer: Account, proxy: ProxyNetworkProvider, pair_contract: str):
@@ -239,7 +257,9 @@ class RouterContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 60000000
-        sc_args = [Address(pair_contract)]
+        sc_args = [
+            Address(pair_contract)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "pause", sc_args)
 
     def pair_contract_resume(self, deployer: Account, proxy: ProxyNetworkProvider, pair_contract: str):
@@ -247,16 +267,18 @@ class RouterContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 60000000
-        sc_args = [Address(pair_contract)]
+        sc_args = [
+            Address(pair_contract)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "resume", sc_args)
-
+    
     def pause(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = f"Pause router contract"
         logger.info(function_purpose)
 
         gas_limit = 60000000
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "pause", [Address(self.address)])
-
+    
     def resume(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = f"Resume router contract"
         logger.info(function_purpose)
@@ -265,8 +287,8 @@ class RouterContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "resume", [Address(self.address)])
 
     def set_pair_creation_enabled(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[bool]: enabled or disabled
+        """ Expected as args:
+            type[bool]: enabled or disabled
         """
         function_purpose = f"Set pair creation enabled/disabled"
         logger.info(function_purpose)
@@ -276,9 +298,11 @@ class RouterContract(DEXContractInterface):
             return ""
 
         gas_limit = 20000000
-        sc_args = [1 if args[0] else 0]
+        sc_args = [
+            1 if args[0] else 0
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setPairCreationEnabled", sc_args)
-
+    
     def claim_developer_rewards_pairs(self, deployer: Account, proxy: ProxyNetworkProvider, pair_contracts: list[str]):
         function_purpose = f"Claim developer rewards for pairs"
         logger.info(function_purpose)
@@ -295,35 +319,49 @@ class RouterContract(DEXContractInterface):
 
         gas_limit = 10000000
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "withdrawRewa", [])
-
-    def set_safe_price_round_save_interval(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[int]: interval
-        type[list[str]]: pair addresses
+    
+    def set_safe_price_round_save_interval(self, deployer: Account, proxy: ProxyNetworkProvider, interval: int):
+        """ Expected as args:
+            type[int]: interval
         """
         function_purpose = f"Set safe price round save interval"
         logger.info(function_purpose)
 
-        if len(args) != 2:
-            log_unexpected_args(function_purpose, args)
-            return ""
+        gas_limit = 10000000
+        sc_args = [
+            interval
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setSafePriceRoundSaveInterval", sc_args)
+
+    def set_default_safe_price_rounds_offset(self, deployer: Account, proxy: ProxyNetworkProvider, offset: int):
+        """ 
+        Sets the default safe price rounds offset for the legacy safe price views.
+        Expected as args:
+            type[int]: offset
+        """
+        function_purpose = f"Set default safe price rounds offset"
+        logger.info(function_purpose)
 
         gas_limit = 10000000
-        sc_args = [args[0]]
-
-        if type(args[1]) != list:
-            log_unexpected_args(function_purpose, args)
-            return ""
-        sc_args.extend([Address(address) for address in args[1]])
-
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setSafePriceRoundSaveInterval", sc_args
-        )
-
+        sc_args = [
+            offset
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setDefaultSafePriceRoundsOffset", sc_args)
+    
     def get_pair_template_address(self, proxy: ProxyNetworkProvider):
         router_data_fetcher = RouterContractDataFetcher(Address(self.address), proxy.url)
         template_pair_address = Address.from_hex(router_data_fetcher.get_data("getPairTemplateAddress")).bech32()
         return template_pair_address
+
+    def get_safe_price_round_save_interval(self, proxy: ProxyNetworkProvider):
+        router_data_fetcher = RouterContractDataFetcher(Address(self.address), proxy.url)
+        interval = router_data_fetcher.get_data("getSafePriceRoundSaveInterval")
+        return int(interval)
+
+    def get_default_safe_price_rounds_offset(self, proxy: ProxyNetworkProvider):
+        router_data_fetcher = RouterContractDataFetcher(Address(self.address), proxy.url)
+        offset = router_data_fetcher.get_data("getDefaultSafePriceRoundsOffset")
+        return int(offset)
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = []):
         pass

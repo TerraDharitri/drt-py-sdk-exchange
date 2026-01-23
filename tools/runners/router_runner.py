@@ -6,14 +6,9 @@ from context import Context
 from contracts.contract_identities import PairContractVersion, RouterContractVersion
 from contracts.router_contract import RouterContract
 from contracts.pair_contract import PairContract
-from tools.common import (
-    API,
-    PROXY,
-    fetch_contracts_states,
-    fetch_new_and_compare_contract_states,
-    get_owner,
-    get_user_continue,
-)
+from tools.common import API, PROXY, \
+    fetch_contracts_states, fetch_new_and_compare_contract_states, \
+    get_owner, get_user_continue
 from tools.runners.common_runner import add_upgrade_command
 from utils.contract_data_fetchers import RouterContractDataFetcher
 
@@ -27,25 +22,25 @@ TEMPLATE_PAIR_LABEL = "template_pair"
 
 def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     """Set up argument parser for router commands"""
-    group_parser = subparsers.add_parser("router", help="router group commands")
+    group_parser = subparsers.add_parser('router', help='router group commands')
     subgroup_parser = group_parser.add_subparsers()
 
-    contract_parser = subgroup_parser.add_parser("contract", help="router contract commands")
+    contract_parser = subgroup_parser.add_parser('contract', help='router contract commands')
 
     contract_group = contract_parser.add_subparsers()
     add_upgrade_command(contract_group, upgrade_router_contract)
 
-    command_parser = contract_group.add_parser("upgrade-template", help="upgrade template contract command")
+    command_parser = contract_group.add_parser('upgrade-template', help='upgrade template contract command')
     command_parser.set_defaults(func=upgrade_template_pair_contract)
 
-    command_parser = contract_group.add_parser("pair-creation", help="toggle pair creation command")
-    command_parser.add_argument("--state", action="store_true", help="pair creation state")
+    command_parser = contract_group.add_parser('pair-creation', help='toggle pair creation command')
+    command_parser.add_argument('--state', action='store_true', help='pair creation state')
     command_parser.set_defaults(func=enable_pair_creation)
 
-    command_parser = contract_group.add_parser("pause", help="pause router command")
+    command_parser = contract_group.add_parser('pause', help='pause router command')
     command_parser.set_defaults(func=pause)
 
-    command_parser = contract_group.add_parser("resume", help="resume router command")
+    command_parser = contract_group.add_parser('resume', help='resume router command')
     command_parser.set_defaults(func=resume)
 
     return group_parser
@@ -93,19 +88,15 @@ def upgrade_router_contract(args: Any):
 
 def upgrade_template_pair_contract(args: Any):
     """Upgrade template pair contract"""
-
+    
     compare_states = args.compare_states
     network_providers = NetworkProviders(API, PROXY)
     dex_owner = get_owner(network_providers.proxy)
     context = Context()
     router_address = context.get_contracts(config.ROUTER_V2)[0].address
 
-    router_data_fetcher = RouterContractDataFetcher(
-        Address.new_from_bech32(router_address), network_providers.proxy.url
-    )
-    template_pair_address = Address.new_from_hex(
-        router_data_fetcher.get_data("getPairTemplateAddress"), "drt"
-    ).to_bech32()
+    router_data_fetcher = RouterContractDataFetcher(Address.new_from_bech32(router_address), network_providers.proxy.url)
+    template_pair_address = Address.new_from_hex(router_data_fetcher.get_data("getPairTemplateAddress"), "drt").to_bech32()
     template_pair = PairContract.load_contract_by_address(template_pair_address)
     print(f"Upgrade template pair contract: {template_pair_address}")
 
@@ -126,19 +117,11 @@ def upgrade_template_pair_contract(args: Any):
             return
 
     template_pair.version = PairContractVersion.V2
-    args = [
-        config.ZERO_CONTRACT_ADDRESS,
-        config.ZERO_CONTRACT_ADDRESS,
-        config.ZERO_CONTRACT_ADDRESS,
-        0,
-        0,
-        config.ZERO_CONTRACT_ADDRESS,
-    ]
+    args = [config.ZERO_CONTRACT_ADDRESS, config.ZERO_CONTRACT_ADDRESS,
+            config.ZERO_CONTRACT_ADDRESS, 0, 0, config.ZERO_CONTRACT_ADDRESS]
     tx_hash = template_pair.contract_upgrade(dex_owner, network_providers.proxy, bytecode_path, args)
 
-    if not network_providers.check_complex_tx_status(
-        tx_hash, f"upgrade template pair contract: {template_pair_address}"
-    ):
+    if not network_providers.check_complex_tx_status(tx_hash, f"upgrade template pair contract: {template_pair_address}"):
         if not get_user_continue():
             return
 
@@ -168,7 +151,6 @@ def enable_pair_creation(args: Any):
         if not get_user_continue():
             return
 
-
 def pause(args: Any):
     """Pause router contract"""
 
@@ -182,7 +164,6 @@ def pause(args: Any):
     if not network_providers.check_simple_tx_status(tx_hash, "pause router contract"):
         if not get_user_continue():
             return
-
 
 def resume(args: Any):
     """Resume router contract"""

@@ -1,8 +1,10 @@
-{
-    "token": {
-        "token_prefix": "E2ETK7",
-        "number_of_tokens": 16
-    },
+{   
+    "token": 
+        {
+            "token_prefix": "E2ETK7",
+            "number_of_tokens": 16
+        },
+
     "rewa_wraps": [
         {
             "unlocked_asset": 1
@@ -14,6 +16,7 @@
             "unlocked_asset": 1
         }
     ],
+
     "locked_assets": [
         {
             "unlocked_asset": 0,
@@ -21,6 +24,7 @@
             "locked_asset_name": "LockedMOA"
         }
     ],
+
     "simple_locks": [
         {
             "locked_token": "LKTK",
@@ -31,6 +35,7 @@
             "locked_farm_token_name": "LockedFarmTK"
         }
     ],
+
     "simple_locks_energy": [
         {
             "base_token": 0,
@@ -39,17 +44,14 @@
             "locked_asset_factory": 0,
             "min_migrated_lock_epochs": 0,
             "lock_options": [
-                360,
-                720,
-                1440
+                360, 720, 1440
             ],
             "penalties": [
-                5000,
-                7000,
-                8000
+                5000, 7000, 8000
             ]
         }
     ],
+
     "fees_collectors": [
         {
             "energy_factory": 0,
@@ -57,6 +59,7 @@
             "locked_tokens_per_block": 17500000000000000000000
         }
     ],
+
     "unstakers": [
         {
             "energy_factory": 0,
@@ -65,6 +68,7 @@
             "fees_burn_percentage": 5000
         }
     ],
+
     "proxies": [
         {
             "locked_asset": 0,
@@ -74,6 +78,7 @@
             "proxy_farm_name": "LockedLPStaked"
         }
     ],
+
     "proxies_v2": [
         {
             "locked_asset": 0,
@@ -84,13 +89,21 @@
             "proxy_farm_name": "xMOALPStaked"
         }
     ],
-    "router": [],
+
+    "router": [
+
+    ],
+
     "router_v2": [
         {
             "empty": 0
         }
     ],
-    "pairs": [],
+
+    "pairs": [
+
+    ],
+
     "pairs_v2": [
         {
             "launched_token": 1,
@@ -235,22 +248,48 @@
             "special_fee": 100,
             "fees_collector": 0,
             "fees_collector_cut": 500
+        },
+        {
+            "launched_token": 0,
+            "accepted_token": 2,
+            "lp_token": "MOAUSDC",
+            "lp_token_name": "MOAUSDCLP",
+            "fee_token": 1,
+            "total_fee": 300,
+            "special_fee": 100,
+            "fees_collector": 0,
+            "fees_collector_cut": 500
         }
     ],
+
     "pairs_view": [
         {
             "empty": 0
         }
     ],
+
     "permissions_hubs": [
         {
             "empty": 0
         }
     ],
-    "farms_community": [],
-    "farms_unlocked": [],
-    "farms_locked": [],
-    "proxy_deployers": [],
+
+    "farms_community": [
+
+    ],
+
+    "farms_unlocked": [
+
+    ],
+
+    "farms_locked": [
+
+    ],
+
+    "proxy_deployers": [
+
+    ],
+
     "farms_boosted": [
         {
             "farming_pool": 0,
@@ -424,8 +463,15 @@
             "min_farm": 1
         }
     ],
-    "price_discoveries": [],
-    "stakings": [],
+
+    "price_discoveries": [
+
+    ],
+
+    "stakings": [
+
+    ],
+
     "stakings_v2": [
         {
             "staking_token": 3,
@@ -491,7 +537,11 @@
             "rewards": 10000000000000000000000000
         }
     ],
-    "metastakings": [],
+
+    "metastakings": [
+
+    ],
+
     "metastakings_v2": [
         {
             "token": 3,
@@ -526,6 +576,7 @@
             "metastake_token_name": "MetaStakedCRTLK"
         }
     ],
+
     "stakings_boosted": [
         {
             "staking_token": 14,
@@ -544,6 +595,7 @@
             "min_farm": 1000
         }
     ],
+
     "metastakings_boosted": [
         {
             "token": 14,
@@ -555,6 +607,7 @@
             "lock_factory": 0
         }
     ],
+
     "escrows": [
         {
             "lock_factory": 0,
@@ -562,6 +615,7 @@
             "cooldown_epochs": 30
         }
     ],
+
     "lk_wraps": [
         {
             "lock_factory:": 0,
@@ -569,12 +623,14 @@
             "wrapped_token_name": "WrappedXMOA"
         }
     ],
+
     "position_creator": [
         {
             "rewa_wrap": 1,
             "router_v2": 0
         }
     ],
+
     "locked_token_position_creator": [
         {
             "energy_factory": 0,
@@ -585,12 +641,14 @@
             "router_v2": 0
         }
     ],
+
     "composable_tasks": [
         {
             "rewa_wrap": 1,
             "router_v2": 0
         }
     ],
+
     "governances": [
         {
             "energy_factory": 0,

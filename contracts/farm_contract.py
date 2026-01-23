@@ -1,36 +1,26 @@
 import config
 from contracts.contract_identities import FarmContractVersion, DEXContractInterface
-from contracts.base_contracts import (
-    BaseFarmContract,
-    BaseBoostedContract,
-    BaseSCWhitelistContract,
-    BasePermissionsHubContract,
-)
+from contracts.base_contracts import (BaseFarmContract, BaseBoostedContract, 
+                                      BaseSCWhitelistContract, BasePermissionsHubContract)
 from utils import decoding_structures
 from utils.contract_data_fetchers import FarmContractDataFetcher
 from utils.logger import get_logger
-from utils.utils_tx import NetworkProviders, DCDTToken, multi_dcdt_endpoint_call, deploy, upgrade_call, endpoint_call
+from utils.utils_tx import NetworkProviders, DCDTToken, \
+    multi_dcdt_endpoint_call, deploy, upgrade_call, endpoint_call
 from utils.utils_chain import Account, WrapperAddress as Address, decode_merged_attributes, hex_to_string
 from dharitri_py_sdk import CodeMetadata, ProxyNetworkProvider
 from dharitri_py_sdk.abi import AddressValue
 from utils.utils_generic import log_step_pass, log_substep, log_unexpected_args
-from events.farm_events import (
-    EnterFarmEvent,
-    ExitFarmEvent,
-    ClaimRewardsFarmEvent,
-    CompoundRewardsFarmEvent,
-    MergePositionFarmEvent,
-    MigratePositionFarmEvent,
-)
+from events.farm_events import (EnterFarmEvent, ExitFarmEvent, ClaimRewardsFarmEvent,
+                                CompoundRewardsFarmEvent, MergePositionFarmEvent, MigratePositionFarmEvent)
 from typing import Dict, Any
 
 logger = get_logger(__name__)
 
 
 class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContract, BasePermissionsHubContract):
-    def __init__(
-        self, farming_token, farm_token, farmed_token, address, version: FarmContractVersion, proxy_contract=None
-    ):
+    def __init__(self, farming_token, farm_token, farmed_token, address, version: FarmContractVersion,
+                 proxy_contract=None):
         self.farmingToken = farming_token
         self.farmToken = farm_token
         self.farmedToken = farmed_token
@@ -51,14 +41,12 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return FarmContract(
-            farming_token=config_dict["farmingToken"],
-            farm_token=config_dict["farmToken"],
-            farmed_token=config_dict["farmedToken"],
-            address=config_dict["address"],
-            version=FarmContractVersion(config_dict["version"]),
-        )
-
+        return FarmContract(farming_token=config_dict['farmingToken'],
+                            farm_token=config_dict['farmToken'],
+                            farmed_token=config_dict['farmedToken'],
+                            address=config_dict['address'],
+                            version=FarmContractVersion(config_dict['version']))
+    
     def get_contract_tokens(self) -> list[str]:
         return [self.farmToken]
 
@@ -68,7 +56,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         farming_token = hex_to_string(data_fetcher.get_data("getFarmingTokenId"))
         farm_token = hex_to_string(data_fetcher.get_data("getFarmTokenId"))
         farmed_token = hex_to_string(data_fetcher.get_data("getRewardTokenId"))
-        version = FarmContractVersion.V2Boosted  # TODO: find a way to determine this automatically
+        version = FarmContractVersion.V2Boosted    # TODO: find a way to determine this automatically
 
         if not farming_token or not farmed_token:
             return None
@@ -97,10 +85,9 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         sc_args = [tokens]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), enterFarmFn, sc_args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), enterFarmFn, sc_args)
+    
     def enter_farm_on_behalf(self, network_provider: NetworkProviders, user: Account, event: EnterFarmEvent) -> str:
         function_purpose = "enter farm on behalf"
         logger.info(function_purpose)
@@ -116,11 +103,11 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         if event.farm_tk:
             tokens.append(DCDTToken(event.farm_tk, event.farm_tk_nonce, event.farm_tk_amount))
 
-        sc_args = [tokens, Address(event.on_behalf)]
+        sc_args = [tokens,
+                   Address(event.on_behalf)]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), enterFarmFn, sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), enterFarmFn, sc_args)
 
     def exitFarm(self, network_provider: NetworkProviders, user: Account, event: ExitFarmEvent) -> str:
         function_purpose = f"exit farm"
@@ -129,11 +116,12 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         gas_limit = 50000000
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
-        sc_args = [tokens]
+        sc_args = [
+            tokens
+        ]
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "exitFarm", sc_args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "exitFarm", sc_args)
 
     def claimRewards(self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent) -> str:
         function_purpose = f"claimRewards"
@@ -142,15 +130,14 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         gas_limit = 50000000
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
-        sc_args = [tokens]
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "claimRewards", sc_args
-        )
-
-    def claim_boosted_rewards(
-        self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent
-    ) -> str:
-        claim_fn = "claimBoostedRewards"
+        sc_args = [
+            tokens
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "claimRewards", sc_args)
+    
+    def claim_boosted_rewards(self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent) -> str:
+        claim_fn = 'claimBoostedRewards'
         logger.info(f"{claim_fn}")
         logger.debug(f"Account: {user.address} claiming for {event.user}")
 
@@ -158,29 +145,22 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         sc_args = [Address(event.user)] if event.user else []
         return endpoint_call(network_provider.proxy, gas_limit, user, Address(self.address), claim_fn, sc_args)
-
-    def claim_rewards_on_behalf(
-        self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent
-    ) -> str:
+    
+    def claim_rewards_on_behalf(self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent) -> str:
         function_purpose = f"claimRewardsOnBehalf"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
         gas_limit = 50000000
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
-        sc_args = [tokens]
-        return multi_dcdt_endpoint_call(
-            function_purpose,
-            network_provider.proxy,
-            gas_limit,
-            user,
-            Address(self.address),
-            "claimRewardsOnBehalf",
-            sc_args,
-        )
-
+        sc_args = [
+            tokens
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "claimRewardsOnBehalf", sc_args)
+    
     def collect_undistributed_boosted_rewards(self, proxy: ProxyNetworkProvider, user: Account) -> str:
-        claim_fn = "collectUndistributedBoostedRewards"
+        claim_fn = 'collectUndistributedBoostedRewards'
         logger.info(f"{claim_fn}")
         logger.debug(f"Account: {user.address}")
 
@@ -188,37 +168,34 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         return endpoint_call(proxy, gas_limit, user, Address(self.address), claim_fn, [])
 
-    def compoundRewards(
-        self, network_provider: NetworkProviders, user: Account, event: CompoundRewardsFarmEvent
-    ) -> str:
+    def compoundRewards(self, network_provider: NetworkProviders, user: Account, event: CompoundRewardsFarmEvent) -> str:
         function_purpose = f"compoundRewards"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
         gas_limit = 50000000
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
-        sc_args = [tokens]
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "compoundRewards", sc_args
-        )
+        sc_args = [
+            tokens
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "compoundRewards", sc_args)
 
-    def migratePosition(
-        self, network_provider: NetworkProviders, user: Account, event: MigratePositionFarmEvent
-    ) -> str:
+    def migratePosition(self, network_provider: NetworkProviders, user: Account, event: MigratePositionFarmEvent) -> str:
         function_purpose = f"migratePosition"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
         gas_limit = 50000000
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
-        sc_args = [tokens, user.address]
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "migratePosition", sc_args
-        )
-
-    def mergePositions(
-        self, network_provider: NetworkProviders, user: Account, event_list: list[MergePositionFarmEvent]
-    ) -> str:
+        sc_args = [
+            tokens,
+            user.address
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "migratePosition", sc_args)
+    
+    def mergePositions(self, network_provider: NetworkProviders, user:Account, event_list: list[MergePositionFarmEvent]) -> str:
         function_purpose = f"mergeFarmTokens"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
@@ -226,22 +203,19 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         gas_limit = 50000000
 
         tokens = [DCDTToken(self.farmToken, event.nonce, event.amount) for event in event_list]
-
-        original_caller = next(
-            (event.original_caller for event in event_list if hasattr(event, "original_caller")), None
-        )
-
+        
+        original_caller = next((event.original_caller for event in event_list if hasattr(event, "original_caller")), None)
+        
         sc_args = [tokens]
 
         if original_caller:
             sc_args.append(original_caller)
 
-        return multi_dcdt_endpoint_call(
-            function_purpose, network_provider.proxy, gas_limit, user, Address(self.address), "mergeFarmTokens", sc_args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "mergeFarmTokens", sc_args)
+    
     def allow_external_claim(self, network_provider: NetworkProviders, user: Account) -> str:
-        fn = "allowExternalClaimBoostedRewards"
+        fn = 'allowExternalClaimBoostedRewards'
         logger.info(f"{fn}")
         logger.debug(f"Account: {user.address}")
 
@@ -264,13 +238,17 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         address = ""
         tx_hash = ""
 
-        if (self.version in [FarmContractVersion.V12, FarmContractVersion.V14Unlocked] and len(args) < 1) or (
-            self.version in [FarmContractVersion.V14Locked, FarmContractVersion.V2Boosted] and len(args) != 2
-        ):
+        if (self.version in [FarmContractVersion.V12, FarmContractVersion.V14Unlocked] and len(args) < 1) or \
+           (self.version in [FarmContractVersion.V14Locked, FarmContractVersion.V2Boosted] and len(args) != 2):
             log_unexpected_args(f"{function_purpose} version {self.version.name}", args)
             return tx_hash, address
 
-        arguments = [self.farmedToken, self.farmingToken, 1000000000000, Address(args[0])]
+        arguments = [
+            self.farmedToken,
+            self.farmingToken,
+            1000000000000,
+            Address(args[0])
+        ]
         if self.version == FarmContractVersion.V14Locked:
             arguments.insert(2, Address(args[1]))
         if self.version == FarmContractVersion.V2Boosted:
@@ -283,9 +261,8 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
 
-    def contract_upgrade(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = [], no_init: bool = False
-    ):
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = [],
+                         no_init: bool = False):
         """Expecting as args:
         type[str]: pair contract address
         type[str]: locked asset factory address (only V14Locked)
@@ -302,13 +279,17 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         if no_init:
             arguments = []
         else:
-            if (self.version in [FarmContractVersion.V12, FarmContractVersion.V14Unlocked] and len(args) < 1) or (
-                self.version in [FarmContractVersion.V14Locked, FarmContractVersion.V2Boosted] and len(args) != 2
-            ):
+            if (self.version in [FarmContractVersion.V12, FarmContractVersion.V14Unlocked] and len(args) < 1) or \
+               (self.version in [FarmContractVersion.V14Locked, FarmContractVersion.V2Boosted] and len(args) != 2):
                 log_unexpected_args(f"{function_purpose} version {self.version.name}", args)
                 return tx_hash
 
-            arguments = [self.farmedToken, self.farmingToken, 1000000000000, Address(args[0])]
+            arguments = [
+                self.farmedToken,
+                self.farmingToken,
+                1000000000000,
+                Address(args[0])
+            ]
             if self.version == FarmContractVersion.V14Locked:
                 arguments.insert(2, Address(args[1]))
             if self.version == FarmContractVersion.V2Boosted:
@@ -318,15 +299,14 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         logger.debug(f"Arguments: {arguments}")
 
-        tx_hash = upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
-        )
+        tx_hash = upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                               bytecode_path, metadata, arguments)
         return tx_hash
 
     def register_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """Expecting as args:percent
-        type[str]: token display name
-        type[str]: token ticker
+            type[str]: token display name
+            type[str]: token ticker
         """
         function_purpose = "Register farm token"
         logger.info(function_purpose)
@@ -337,19 +317,16 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
             return tx_hash
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
 
         logger.debug(f"Arguments: {sc_args}")
 
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "registerFarmToken",
-            sc_args,
-            config.DEFAULT_ISSUE_TOKEN_PRICE,
-        )
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "registerFarmToken", sc_args,
+                             config.DEFAULT_ISSUE_TOKEN_PRICE)
 
     def set_local_roles_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = "Set local roles for farm token"
@@ -364,7 +341,9 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         logger.info(function_purpose)
 
         gas_limit = 50000000
-        sc_args = [rewards_amount]
+        sc_args = [
+            rewards_amount
+        ]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setPerBlockRewardAmount", sc_args)
 
@@ -373,7 +352,9 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         logger.info(function_purpose)
 
         gas_limit = 20000000
-        sc_args = [percent]
+        sc_args = [
+            percent
+        ]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "set_penalty_percent", sc_args)
 
@@ -382,7 +363,9 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         logger.info(function_purpose)
 
         gas_limit = 50000000
-        sc_args = [epochs]
+        sc_args = [
+            epochs
+        ]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "set_minimum_farming_epochs", sc_args)
 
@@ -408,19 +391,20 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setBoostedYieldsFactors", sc_args)
 
     def set_boosted_yields_rewards_percentage(self, deployer: Account, proxy: ProxyNetworkProvider, percentage: int):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Set boosted yield rewards percentage"
         logger.info(function_purpose)
 
         gas_limit = 70000000
         sc_args = [percentage]
         logger.debug(f"Arguments: {sc_args}")
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setBoostedYieldsRewardsPercentage", sc_args
-        )
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setBoostedYieldsRewardsPercentage",
+                             sc_args)
 
     def set_energy_factory_address(self, deployer: Account, proxy: ProxyNetworkProvider, energy_factory_address: str):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Set energy factory address in farm"
         logger.info(function_purpose)
 
@@ -430,7 +414,8 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setEnergyFactoryAddress", sc_args)
 
     def set_locking_address(self, deployer: Account, proxy: ProxyNetworkProvider, locking_address: str):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Set locking sc address in farm"
         logger.info(function_purpose)
 
@@ -440,27 +425,30 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLockingScAddress", sc_args)
 
     def set_lock_epochs(self, deployer: Account, proxy: ProxyNetworkProvider, lock_epochs: int):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Set lock epochs in farm"
         logger.info(function_purpose)
-
+        
         gas_limit = 50000000
         sc_args = [lock_epochs]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setLockEpochs", sc_args)
-
+    
     def update_owner_or_admin(self, deployer: Account, proxy: ProxyNetworkProvider, old_address: str):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Update owner or admin"
         logger.info(function_purpose)
-
+        
         gas_limit = 70000000
         sc_args = [old_address]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "updateOwnerOrAdmin", sc_args)
-
+    
     def set_transfer_role_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, whitelisted_sc_address: str):
-        """Only V2Boosted."""
+        """Only V2Boosted.
+        """
         function_purpose = "Set transfer role farm token"
         logger.info(function_purpose)
 
@@ -472,7 +460,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
     def resume(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = "Resume farm contract"
         logger.info(function_purpose)
-
+        
         gas_limit = 30000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "resume", sc_args)
@@ -480,7 +468,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
     def pause(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = "Pause farm contract"
         logger.info(function_purpose)
-
+        
         gas_limit = 30000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "pause", sc_args)
@@ -488,7 +476,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
     def start_produce_rewards(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = "Start producing rewards in farm contract"
         logger.info(function_purpose)
-
+        
         gas_limit = 10000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "startProduceRewards", sc_args)
@@ -496,27 +484,27 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
     def end_produce_rewards(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = "Stop producing rewards in farm contract"
         logger.info(function_purpose)
-
+        
         gas_limit = 10000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "endProduceRewards", sc_args)
 
     def get_lp_address(self, proxy: ProxyNetworkProvider) -> str:
         data_fetcher = FarmContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data("getPairContractManagedAddress")
+        raw_results = data_fetcher.get_data('getPairContractManagedAddress')
         if not raw_results:
             return ""
         address = Address.from_hex(raw_results).bech32()
 
         return address
-
+    
     def get_permissions(self, address: str, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = FarmContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data("getPermissions", [AddressValue.new_from_address(Address(address))])
+        raw_results = data_fetcher.get_data('getPermissions', [AddressValue.new_from_address(Address(address))])
         if not raw_results:
             return -1
         return int(raw_results)
-
+    
     def get_all_stats(self, proxy: ProxyNetworkProvider, week: int = None) -> Dict[str, Any]:
         all_stats = {}
         all_stats.update(self.get_all_farm_global_stats(proxy))

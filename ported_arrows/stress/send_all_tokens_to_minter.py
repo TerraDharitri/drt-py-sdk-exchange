@@ -7,10 +7,7 @@ from utils.utils_chain import Account
 from utils.utils_tx import broadcast_transactions
 from utils.utils_chain import BunchOfAccounts
 from dharitri_py_sdk import ProxyNetworkProvider, TokenPayment, Transaction
-from dharitri_py_sdk.core.transaction_builders import (
-    MultiDCDTNFTTransferBuilder,
-    DefaultTransactionBuildersConfiguration,
-)
+from dharitri_py_sdk.core.transaction_builders import MultiDCDTNFTTransferBuilder, DefaultTransactionBuildersConfiguration
 
 
 def main(cli_args: List[str]):
@@ -50,7 +47,7 @@ def main(cli_args: List[str]):
             account.nonce += 1
 
             transactions.append(transaction)
-
+        
         payments: List[TokenPayment] = []
 
         for fungible in fungibles:
@@ -59,10 +56,8 @@ def main(cli_args: List[str]):
         for nonfungible in nonfungibles:
             if "XMOA" in nonfungible.collection:
                 continue
-            payments.append(
-                TokenPayment.meta_dcdt_from_integer(nonfungible.collection, nonfungible.nonce, nonfungible.balance, 18)
-            )
-
+            payments.append(TokenPayment.meta_dcdt_from_integer(nonfungible.collection, nonfungible.nonce, nonfungible.balance, 18))
+        
         prep_txs(payments)
 
     broadcast_transactions(transactions, proxy, 10, confirm_yes=True)

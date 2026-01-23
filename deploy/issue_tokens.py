@@ -4,13 +4,8 @@ from typing import List
 
 import config
 from utils.logger import get_logger
-from utils.utils_chain import Account, build_token_name, build_token_ticker
-from dharitri_py_sdk import (
-    ProxyNetworkProvider,
-    Transaction,
-    TransactionsFactoryConfig,
-    TokenManagementTransactionsFactory,
-)
+from utils.utils_chain import (Account, build_token_name, build_token_ticker)
+from dharitri_py_sdk import ProxyNetworkProvider, Transaction, TransactionsFactoryConfig, TokenManagementTransactionsFactory
 
 from utils.utils_tx import broadcast_transactions
 
@@ -69,7 +64,7 @@ def main(cli_args: List[str]):
                 can_pause=True,
                 can_change_owner=True,
                 can_upgrade=True,
-                can_add_special_roles=True,
+                can_add_special_roles=True
             )
 
             tx.nonce = account.nonce
@@ -86,9 +81,8 @@ def main(cli_args: List[str]):
 
     issue_token()
 
-    hashes = broadcast_transactions(
-        transactions, proxy, args.chunk_size, sleep=args.sleep_between_chunks, confirm_yes=args.yes
-    )
+    hashes = broadcast_transactions(transactions, proxy, args.chunk_size,
+                                    sleep=args.sleep_between_chunks, confirm_yes=args.yes)
 
     return hashes
 

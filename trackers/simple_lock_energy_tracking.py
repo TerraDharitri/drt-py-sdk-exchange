@@ -16,17 +16,15 @@ class SimpleLockEnergyTokenAttributes:
 
 class SimpleLockEnergyTracker:
     token_decode_structure = {
-        "token_identifier": "string",
-        "original_token_nonce": "u64",
-        "unlock_epoch": "u64",
+        'token_identifier': 'string',
+        'original_token_nonce': 'u64',
+        'unlock_epoch': 'u64',
     }
 
     def __init__(self, address: str, network_provider: NetworkProviders):
         self.address = address
         self.network_provider = network_provider
-        self.contract_data_fetcher = SimpleLockEnergyContractDataFetcher(
-            Address(address, "drt"), network_provider.proxy.url
-        )
+        self.contract_data_fetcher = SimpleLockEnergyContractDataFetcher(Address(address, "drt"), network_provider.proxy.url)
         self.base_token = self.contract_data_fetcher.get_data("getBaseAssetTokenId")
         self.locked_token = self.contract_data_fetcher.get_data("getLockedTokenId")
 
@@ -41,7 +39,7 @@ class SimpleLockEnergyTracker:
 
     def get_locked_token_attributes(self, token: DCDTToken) -> SimpleLockEnergyTokenAttributes:
         # fetch token attributes
-        raw_attributes = self.network_provider.api.get_nft_data(token.get_full_token_name())["attributes"]
+        raw_attributes = self.network_provider.api.get_nft_data(token.get_full_token_name())['attributes']
         # decode token attributes
         decoded_attributes = decode_merged_attributes(base64_to_hex(raw_attributes), self.token_decode_structure)
         token_attributes = SimpleLockEnergyTokenAttributes(decoded_attributes)

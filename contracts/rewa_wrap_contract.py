@@ -15,13 +15,17 @@ class RewaWrapContract(DEXContractInterface):
         self.wrapped_token = wrapped_token
 
     def get_config_dict(self) -> dict:
-        output_dict = {"address": self.address, "wrapped_token": self.wrapped_token}
+        output_dict = {
+            "address": self.address,
+            "wrapped_token": self.wrapped_token
+        }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return RewaWrapContract(address=config_dict["address"], wrapped_token=config_dict["wrapped_token"])
-
+        return RewaWrapContract(address=config_dict['address'],
+                                wrapped_token=config_dict['wrapped_token'])
+    
     def get_contract_tokens(self) -> list[str]:
         return [self.wrapped_token]
 
@@ -30,14 +34,17 @@ class RewaWrapContract(DEXContractInterface):
         raise NotImplementedError
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None):
-        """Expected as args:"""
+        """ Expected as args:
+        """
         function_purpose = f"deploy {type(self).__name__} contract"
         logger.info(function_purpose)
 
         metadata = CodeMetadata(upgradeable=True, payable_by_contract=True, readable=True)
         gas_limit = 200000000
 
-        arguments = [self.wrapped_token]
+        arguments = [
+            self.wrapped_token
+        ]
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
 
         return tx_hash, address
@@ -51,18 +58,19 @@ class RewaWrapContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, user, Address(self.address), "wrapRewa", sc_args, value=str(amount))
 
     def unwrap_rewa(self, user: Account, proxy: ProxyNetworkProvider, amount: int):
-        """Expected as args:
-        type[DCDTToken]: wrapped token
+        """ Expected as args:
+            type[DCDTToken]: wrapped token
         """
         function_purpose = f"unwrap rewa"
         logger.info(function_purpose)
 
         gas_limit = 10000000
-        args = [DCDTToken(self.wrapped_token, 0, amount)]
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "unwrapRewa", args
-        )
-
+        args = [
+            DCDTToken(self.wrapped_token, 0, amount)
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user,
+                                        Address(self.address), "unwrapRewa", args)
+    
     def resume(self, deployer: Account, proxy: ProxyNetworkProvider):
         function_purpose = f"Resume wrapper contract"
         logger.info(function_purpose)

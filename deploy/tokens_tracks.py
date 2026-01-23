@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import json
@@ -76,7 +77,10 @@ class BunchOfTracks:
     def save(self, file: str):
         print(file)
         utils.ensure_folder(Path(file).parent)
-        utils.write_json_file(str(file), {"accounts_by_token": self.accounts_by_token, "all_tokens": self.all_tokens})
+        utils.write_json_file(str(file), {
+            "accounts_by_token": self.accounts_by_token,
+            "all_tokens": self.all_tokens
+        })
 
     def build_index_tokens_by_holder(self):
         print("build_index_tokens_by_holder - begin")

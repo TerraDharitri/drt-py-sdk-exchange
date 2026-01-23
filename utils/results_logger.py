@@ -83,6 +83,7 @@ class ResultsLogger:
         # added the flag below to stop logger errors
         self.active = False
 
+
     def add_event_log(self, log_event: FarmEventResultLogData):
         # TODO: replace log_event type hint with EventResultLogData abstract
         if self.active:

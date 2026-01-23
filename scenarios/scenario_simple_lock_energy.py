@@ -50,13 +50,8 @@ def send_tokens(context: Context):
 
     for token in context.deploy_structure.tokens:
         print(f"Funding each account with {amount} {token} tokens.")
-        args = [
-            f"--proxy={proxy_url}",
-            f"--accounts={accounts}",
-            f"--minter={minter}",
-            f"--token={token}",
-            f"--amount-atoms={amount}",
-        ]
+        args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
+                f'--minter={minter}', f'--token={token}', f'--amount-atoms={amount}']
         send_token_from_minter(args)
         time.sleep(7)
 
@@ -69,11 +64,12 @@ def scenarios(context: Context, threads: int, repeats: int):
         for _ in range(repeats if repeats != 0 else 9999):
             scenarios_per_account(context, random.choice(accounts))
     elif threads > 1:
-        """Concurential run"""
+        """ Concurential run """
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             jobs = min(threads, repeats) if repeats != 0 else threads
             finished_jobs = 0
-            futures = [[executor.submit(scenarios_per_account, context, random.choice(accounts)) for _ in range(jobs)]]
+            futures = [[executor.submit(scenarios_per_account, context, random.choice(accounts))
+                        for _ in range(jobs)]]
 
             # feed the thread workers as they complete each job
             while finished_jobs < repeats or repeats == 0:
@@ -96,7 +92,8 @@ def scenarios_per_account(context: Context, account: Account):
     min_time = 2
     max_time = 10
     deployer_shard = get_shard_of_address(context.deployer_account.address)
-    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard else 1
+    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard \
+        else 1
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -156,7 +153,7 @@ def scenarios_per_account(context: Context, account: Account):
     time.sleep(sleep_time)
 
     wait_time = random.randint(min_time, max_time)
-    print(f"Finished repeat execution. Waiting for {wait_time}s.")
+    print(f'Finished repeat execution. Waiting for {wait_time}s.')
     time.sleep(wait_time)
 
 
@@ -168,19 +165,15 @@ def test_lock_tokens_valid_option_1(context, account: Account, simple_lock_energ
     tx_hash = simple_lock_energy_contract.lock_tokens(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(
-        context.network_provider.check_simple_tx_status(tx_hash), "lock tokens with valid lock option tx pass"
-    )
-    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token), "base token burn")
-    teststep.add_condition(
-        context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token), "add quantity locked token"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, expected_token, destination=account.address.bech32()
-        ),
-        "send locked token to user",
-    )
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "lock tokens with valid lock option tx pass")
+    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token),
+                           "base token burn")
+    teststep.add_condition(context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token),
+                           "add quantity locked token")
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, expected_token,
+                                                                                 destination=account.address.bech32()),
+                           "send locked token to user")
     teststep.assert_conditions()
 
 
@@ -192,19 +185,15 @@ def test_lock_tokens_valid_option_2(context, account: Account, simple_lock_energ
     tx_hash = simple_lock_energy_contract.lock_tokens(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(
-        context.network_provider.check_simple_tx_status(tx_hash), "lock tokens with valid lock option tx pass"
-    )
-    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token), "base token burn")
-    teststep.add_condition(
-        context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token), "add quantity locked token"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, expected_token, destination=account.address.bech32()
-        ),
-        "send locked token to user",
-    )
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "lock tokens with valid lock option tx pass")
+    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token),
+                           "base token burn")
+    teststep.add_condition(context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token),
+                           "add quantity locked token")
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, expected_token,
+                                                                                 destination=account.address.bech32()),
+                           "send locked token to user")
     teststep.assert_conditions()
 
 
@@ -215,13 +204,10 @@ def test_lock_tokens_invalid_option_1(context, account: Account, simple_lock_ene
     tx_hash = simple_lock_energy_contract.lock_tokens(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(
-        not context.network_provider.check_simple_tx_status(tx_hash), "lock tokens with invalid lock option"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Invalid lock choice"),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "lock tokens with invalid lock option")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Invalid lock choice"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
@@ -232,11 +218,10 @@ def test_lock_other_tokens_1(context, account: Account, simple_lock_energy_contr
     tx_hash = simple_lock_energy_contract.lock_tokens(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash), "lock other tokens")
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "lock other tokens")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
@@ -248,20 +233,18 @@ def test_unlock_early_1(context, account: Account, simple_lock_energy_contract: 
     tx_hash = simple_lock_energy_contract.unlock_early(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash), "unlock early")
-    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token), "locked token burn")
-    teststep.add_condition(
-        context.network_provider.check_for_mint_operation(tx_hash, expected_token), "mint base token"
-    )
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "unlock early")
+    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token),
+                           "locked token burn")
+    teststep.add_condition(context.network_provider.check_for_mint_operation(tx_hash, expected_token),
+                           "mint base token")
     # TODO: calculate burned penalties, rest of penalties sent to fees collector, rest sent to user
     penalty = context.simple_lock_tracker.get_expected_penalty(token)
 
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, expected_token, destination=account.address.bech32()
-        ),
-        "send base token to user",
-    )
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, expected_token,
+                                                                                 destination=account.address.bech32()),
+                           "send base token to user")
     teststep.assert_conditions()
 
 
@@ -272,13 +255,10 @@ def test_unlock_early_invalid_token_1(context, account: Account, simple_lock_ene
     tx_hash = simple_lock_energy_contract.unlock_early(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(
-        not context.network_provider.check_simple_tx_status(tx_hash), "unlock early with invalid token"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "unlock early with invalid token")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
@@ -291,13 +271,11 @@ def test_unlock_early_invalid_token_2(context, account: Account, simple_lock_ene
     forged_token = DCDTToken(forged_contract.locked_token, 1, 1)
     tx_hash = forged_contract.lock_tokens(account, context.network_provider.proxy, args)
     teststep = TestStepConditions()
-    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash), "lock forged token pass")
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, forged_token, destination=account.address.bech32()
-        ),
-        "send base token to user",
-    )
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "lock forged token pass")
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, forged_token,
+                                                                                 destination=account.address.bech32()),
+                           "send base token to user")
     teststep.assert_conditions()
 
     # attempt unlocking of forged token in tested contract
@@ -306,13 +284,10 @@ def test_unlock_early_invalid_token_2(context, account: Account, simple_lock_ene
     tx_hash = simple_lock_energy_contract.unlock_early(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(
-        not context.network_provider.check_simple_tx_status(tx_hash), "unlock early with invalid similar token tx fail"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "unlock early with invalid similar token tx fail")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Invalid payment token"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
@@ -323,30 +298,24 @@ def test_reduce_lock_invalid_1(context, account: Account, simple_lock_energy_con
     tx_hash = simple_lock_energy_contract.reduce_lock(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash), "reduce lock tx fail")
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(
-            tx_hash, "May only reduce by multiples of months (30 epochs)"
-        ),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "reduce lock tx fail")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "May only reduce by multiples of months (30 epochs)"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
-def test_reduce_lock_invalid_too_much_1(
-    context, account: Account, simple_lock_energy_contract: SimpleLockEnergyContract
-):
+def test_reduce_lock_invalid_too_much_1(context, account: Account, simple_lock_energy_contract: SimpleLockEnergyContract):
     token = DCDTToken(simple_lock_energy_contract.locked_token, 1, nominated_amount(100))
     args = [[token], 3]
 
     tx_hash = simple_lock_energy_contract.reduce_lock(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash), "reduce lock tx fail")
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Invalid epochs to reduce"),
-        "tx fail with expected error",
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "reduce lock tx fail")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Invalid epochs to reduce"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 
@@ -359,18 +328,16 @@ def test_reduce_and_unlock_1(context, account: Account, simple_lock_energy_contr
     tx_hash = simple_lock_energy_contract.reduce_lock(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash), "reduce lock tx pass")
-    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token), "locked token burn")
-    teststep.add_condition(
-        context.network_provider.check_for_mint_operation(tx_hash, expected_token), "mint base token"
-    )
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "reduce lock tx pass")
+    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token),
+                           "locked token burn")
+    teststep.add_condition(context.network_provider.check_for_mint_operation(tx_hash, expected_token),
+                           "mint base token")
     # TODO: apply expected penalty calculation - burned penalties, rest of penalties sent to fees collector, rest sent to user
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, expected_token, destination=account.address.bech32()
-        ),
-        "send new base token to user",
-    )
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, expected_token,
+                                                                                 destination=account.address.bech32()),
+                           "send new base token to user")
     teststep.assert_conditions()
 
 
@@ -383,22 +350,18 @@ def test_reduce_lock_1(context, account: Account, simple_lock_energy_contract: S
     tx_hash = simple_lock_energy_contract.reduce_lock(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash), "reduce lock tx pass")
-    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token), "locked token burn")
+    teststep.add_condition(context.network_provider.check_simple_tx_status(tx_hash),
+                           "reduce lock tx pass")
+    teststep.add_condition(context.network_provider.check_for_burn_operation(tx_hash, token),
+                           "locked token burn")
     # TODO: apply expected penalty calculation - mint, burned penalties, rest of penalties sent to fees collector, rest sent to user
-    teststep.add_condition(
-        context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token),
-        "add quantity new locked token",
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_add_quantity_operation(tx_hash, penalties_token), "mint base token"
-    )
-    teststep.add_condition(
-        context.network_provider.check_for_transfer_operation(
-            tx_hash, expected_token, destination=account.address.bech32()
-        ),
-        "send new locked token to user",
-    )
+    teststep.add_condition(context.network_provider.check_for_add_quantity_operation(tx_hash, expected_token),
+                           "add quantity new locked token")
+    teststep.add_condition(context.network_provider.check_for_add_quantity_operation(tx_hash, penalties_token),
+                           "mint base token")
+    teststep.add_condition(context.network_provider.check_for_transfer_operation(tx_hash, expected_token,
+                                                                                 destination=account.address.bech32()),
+                           "send new locked token to user")
     teststep.assert_conditions()
 
 
@@ -409,10 +372,10 @@ def test_unlock_invalid_1(context, account: Account, simple_lock_energy_contract
     tx_hash = simple_lock_energy_contract.unlock_tokens(account, context.network_provider.proxy, args)
 
     teststep = TestStepConditions()
-    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash), "unlock tokens tx fail")
-    teststep.add_condition(
-        context.network_provider.check_for_error_operation(tx_hash, "Cannot unlock yet"), "tx fail with expected error"
-    )
+    teststep.add_condition(not context.network_provider.check_simple_tx_status(tx_hash),
+                           "unlock tokens tx fail")
+    teststep.add_condition(context.network_provider.check_for_error_operation(tx_hash, "Cannot unlock yet"),
+                           "tx fail with expected error")
     teststep.assert_conditions()
 
 

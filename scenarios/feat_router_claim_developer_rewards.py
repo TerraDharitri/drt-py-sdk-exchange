@@ -11,7 +11,6 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 @pytest.mark.parametrize("env", ["chainsim"])
 def test_claim_developer_rewards(env):
     import config
@@ -24,13 +23,12 @@ def test_claim_developer_rewards(env):
 
         chain_sim, found_accounts = start_handler(args)
         chain_sim = ChainSimulator()
-        logger.info(f"Chain sim started. Loaded {len(found_accounts)} accounts")
+        logger.info(f'Chain sim started. Loaded {len(found_accounts)} accounts')
         sleep(10)
 
     # Load context
     import importlib
     import os
-
     os.environ["DRT_DEX_ENV"] = env
     importlib.reload(config)
     import config
@@ -41,17 +39,15 @@ def test_claim_developer_rewards(env):
     context.deployer_account.sync_nonce(context.network_provider.proxy)
 
     # Upgrade router
-    bytecode = config.HOME / "Projects/dex/drt-sc-exchange/output-docker/router/router.wasm"
+    bytecode = config.HOME / "Projects/dex/drt-sc-exchnage/output-docker/router/router.wasm"
     router_contract.contract_upgrade(context.deployer_account, context.network_provider.proxy, bytecode)
     if env == "chainsim":
         chain_sim.advance_blocks(1)
 
     # Find pairs with developer rewards
-    router_data_fetcher = RouterContractDataFetcher(
-        Address.new_from_bech32(router_contract.address), context.network_provider.proxy.url
-    )
+    router_data_fetcher = RouterContractDataFetcher(Address.new_from_bech32(router_contract.address), context.network_provider.proxy.url)
     registered_pairs = router_data_fetcher.get_data("getAllPairsManagedAddresses")
-    logger.info(f"Found {len(registered_pairs)} pairs")
+    logger.info(f'Found {len(registered_pairs)} pairs')
 
     count = 0
     sum = 0
@@ -74,11 +70,9 @@ def test_claim_developer_rewards(env):
     hashes = []
     chunk_size = 20
     b32_pairs = [WrapperAddress.from_hex(pair_address).bech32() for pair_address in selected_pairs]
-    chunks = [b32_pairs[i : i + chunk_size] for i in range(0, len(b32_pairs), chunk_size)]
+    chunks = [b32_pairs[i:i + chunk_size] for i in range(0, len(b32_pairs), chunk_size)]
     for chunk in chunks:
-        hash = router_contract.claim_developer_rewards_pairs(
-            context.deployer_account, context.network_provider.proxy, chunk
-        )
+        hash = router_contract.claim_developer_rewards_pairs(context.deployer_account, context.network_provider.proxy, chunk)
         hashes.append(hash)
         if env == "chainsim":
             chain_sim.advance_blocks(1)
@@ -88,24 +82,22 @@ def test_claim_developer_rewards(env):
     # hashes.append(hash)
     # if env == "chainsim":
     #     chain_sim.advance_blocks(1)
-
+    
     # calculate total paid fee
-    sleep(6)  # wait for the tx to be processed
+    sleep(6)    # wait for the tx to be processed
     total_paid_fee = 0
     for hash in hashes:
         total_paid_fee += int(context.network_provider.proxy.get_transaction(hash).raw["fee"])
     logger.info(f"Total paid fee: {total_paid_fee}")
-
+    
     sleep(2)
 
     owner_balance_after = context.network_provider.proxy.get_account(context.deployer_account.address).balance
     router_balance_after = context.network_provider.proxy.get_account(WrapperAddress(router_contract.address)).balance
-
+    
     logger.info(f"Owner balance difference: {owner_balance_after - owner_balance_before}")
     logger.info(f"Router balance difference: {router_balance_after - router_balance_before}")
 
     assert router_balance_after == router_balance_before, "Router balance should be the same"
     expected_owner_balance = owner_balance_before + (sum - total_paid_fee)
-    assert (
-        owner_balance_after == expected_owner_balance
-    ), f"Owner balance should be greater. Expected: {expected_owner_balance}, Actual: {owner_balance_after}"
+    assert owner_balance_after == expected_owner_balance, f"Owner balance should be greater. Expected: {expected_owner_balance}, Actual: {owner_balance_after}"

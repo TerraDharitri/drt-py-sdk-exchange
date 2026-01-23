@@ -4,14 +4,7 @@ import traceback
 import config
 from contracts.contract_identities import DEXContractInterface
 from utils.contract_data_fetchers import LockedAssetContractDataFetcher
-from utils.utils_tx import (
-    multi_dcdt_endpoint_call,
-    prepare_contract_call_tx,
-    send_contract_call_tx,
-    deploy,
-    upgrade_call,
-    endpoint_call,
-)
+from utils.utils_tx import multi_dcdt_endpoint_call, prepare_contract_call_tx, send_contract_call_tx, deploy, upgrade_call, endpoint_call
 from utils.utils_generic import log_step_fail, log_step_pass, log_substep, log_unexpected_args
 from utils.utils_chain import Account, WrapperAddress as Address, hex_to_string, log_explorer_transaction
 from dharitri_py_sdk import CodeMetadata, ProxyNetworkProvider
@@ -30,18 +23,16 @@ class LockedAssetContract(DEXContractInterface):
         output_dict = {
             "address": self.address,
             "unlocked_asset": self.unlocked_asset,
-            "locked_asset": self.locked_asset,
+            "locked_asset": self.locked_asset
         }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return LockedAssetContract(
-            address=config_dict["address"],
-            unlocked_asset=config_dict["unlocked_asset"],
-            locked_asset=config_dict["locked_asset"],
-        )
-
+        return LockedAssetContract(address=config_dict['address'],
+                                   unlocked_asset=config_dict['unlocked_asset'],
+                                   locked_asset=config_dict['locked_asset'])
+    
     def get_contract_tokens(self) -> list[str]:
         return [self.locked_asset]
 
@@ -68,14 +59,13 @@ class LockedAssetContract(DEXContractInterface):
             bytes.fromhex("00000000000001C711"),
             bytes.fromhex("00000000000001E510"),
             bytes.fromhex("000000000000020310"),
-        ]
+            ]
 
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
 
-    def contract_upgrade(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = [], no_init: bool = False
-    ):
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path,
+                         args: list = [], no_init: bool = False):
         function_purpose = "Upgrade locked asset contract"
         logger.info(function_purpose)
 
@@ -96,35 +86,35 @@ class LockedAssetContract(DEXContractInterface):
                 131856,
             ]
 
-        return upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
-        )
-
+        return upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                            bytecode_path, metadata, arguments)
+    
     def unlock_assets(self, user: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[List[DCDTToken]]: tokens list
+        """ Expected as args:
+            type[List[DCDTToken]]: tokens list
         """
         function_purpose = "unlock tokens"
         logger.info(function_purpose)
         if len(args) != 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, 30000000, user, Address(self.address), "unlockAssets", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 30000000,
+                                        user, Address(self.address), "unlockAssets", args)
 
     def set_new_factory_address(self, deployer: Account, proxy: ProxyNetworkProvider, contract_address: str):
         function_purpose = "Set new factory address"
         logger.info(function_purpose)
 
         gas_limit = 50000000
-        sc_args = [Address(contract_address)]
+        sc_args = [
+            Address(contract_address)
+        ]
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setNewFactoryAddress", sc_args)
 
     def register_locked_asset_token(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[str]: token name
-        type[str]: token ticker
+        """ Expected as args:
+            type[str]: token name
+            type[str]: token ticker
         """
         function_purpose = "Register locked asset token"
         logger.info(function_purpose)
@@ -136,16 +126,13 @@ class LockedAssetContract(DEXContractInterface):
             return tx_hash
 
         gas_limit = 100000000
-        sc_args = [args[0], args[1], 18]
-        return endpoint_call(
-            proxy,
-            gas_limit,
-            deployer,
-            Address(self.address),
-            "registerLockedAssetToken",
-            sc_args,
-            value="50000000000000000",
-        )
+        sc_args = [
+            args[0],
+            args[1],
+            18
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "registerLockedAssetToken", sc_args, value="50000000000000000")
 
     def set_locked_asset_local_roles(self, deployer: Account, proxy: ProxyNetworkProvider, contract: str):
         function_purpose = "Set locked asset token local roles"
@@ -154,39 +141,43 @@ class LockedAssetContract(DEXContractInterface):
         gas_limit = 100000000
         sc_args = [
             Address(contract),
-            3,
-            4,
-            5,
+            3, 4, 5,
         ]
-        return endpoint_call(
-            proxy, gas_limit, deployer, Address(self.address), "setLocalRolesLockedAssetToken", sc_args
-        )
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "setLocalRolesLockedAssetToken", sc_args)
 
     def whitelist_contract(self, deployer: Account, proxy: ProxyNetworkProvider, contract_to_whitelist: str):
         function_purpose = "Whitelist contract in locked asset contract"
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(contract_to_whitelist)]
-        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "whitelist", sc_args)
+        sc_args = [
+            Address(contract_to_whitelist)
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "whitelist", sc_args)
 
-    def set_transfer_role_for_contract(
-        self, deployer: Account, proxy: ProxyNetworkProvider, contract_to_whitelist: str
-    ):
+    def set_transfer_role_for_contract(self, deployer: Account, proxy: ProxyNetworkProvider, contract_to_whitelist: str):
         function_purpose = "Set transfer role for contract"
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(contract_to_whitelist)]
-        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleForAddress", sc_args)
+        sc_args = [
+            Address(contract_to_whitelist)
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "setTransferRoleForAddress", sc_args)
 
     def set_burn_role_for_contract(self, deployer: Account, proxy: ProxyNetworkProvider, contract_to_whitelist: str):
         function_purpose = "Set burn role for contract"
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        sc_args = [Address(contract_to_whitelist)]
-        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setBurnRoleForAddress", sc_args)
+        sc_args = [
+            Address(contract_to_whitelist)
+        ]
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "setBurnRoleForAddress", sc_args)
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = []):
         pass

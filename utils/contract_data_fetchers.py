@@ -23,8 +23,12 @@ class DataFetcher:
             raise ValueError(f"View name not registered in {type(self).__name__}")
 
     def _query_contract(self, view_name: str, attrs: List[Any] = []):
-        controller = SmartContractController(self.proxy.get_network_config().chain_id, self.proxy)
-        query = controller.create_query(contract=self.contract_address, function=view_name, arguments=attrs)
+        controller = SmartContractController(self.proxy.get_network_config().chain_id,self.proxy)
+        query = controller.create_query(
+            contract=self.contract_address,
+            function=view_name,
+            arguments=attrs
+        )
         return controller.run_query(query)
 
     def _get_int_view(self, view_name: str, attrs: List[Any]) -> int:
@@ -133,7 +137,7 @@ class RouterContractDataFetcher(DataFetcher):
         super().__init__(contract_address, proxy_url)
         self.view_handler_map = {
             "getAllPairsManagedAddresses": self._get_hex_list_view,
-            "getPairTemplateAddress": self._get_hex_view,
+            "getPairTemplateAddress": self._get_hex_view
         }
 
 
@@ -174,7 +178,7 @@ class FarmContractDataFetcher(DataFetcher):
             "getState": self._get_int_view,
             "getPairContractManagedAddress": self._get_hex_view,
             "getUserTotalFarmPosition": self._get_int_view,
-            "getCurrentWeek": self._get_int_view,
+            "getCurrentWeek": self._get_int_view,            
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserEnergyForWeek": self._get_hex_view,
@@ -198,6 +202,7 @@ class PairContractDataFetcher(DataFetcher):
             "getEquivalent": self._get_int_view,
             "getTotalFeePercent": self._get_int_view,
             "getSpecialFee": self._get_int_view,
+            "getFeesCollectorCutPercentage": self._get_int_view,
             "updateAndGetSafePrice": self._get_hex_view,
             "getSafePriceByRoundOffset": self._get_hex_view,
             "getSafePriceByTimestampOffset": self._get_hex_view,
@@ -206,12 +211,13 @@ class PairContractDataFetcher(DataFetcher):
             "getFirstTokenId": self._get_hex_view,
             "getSecondTokenId": self._get_hex_view,
             "getInitialLiquidtyAdder": self._get_hex_view,
-            "getTokensForGivenPosition": self._get_int_list_view,
+            "getTokensForGivenPosition": self._get_hex_list_view,
             "getState": self._get_int_view,
             "getReservesAndTotalSupply": self._get_int_list_view,
             "updateAndGetTokensForGivenPositionWithSafePrice": self._get_hex_list_view,
             "getPriceObservation": self._get_hex_list_view,
             "getSafePriceRoundSaveInterval": self._get_int_view,
+            "getFeesCollectorAddress": self._get_hex_view
         }
 
     def get_token_reserve(self, token_ticker: str) -> int:
@@ -239,6 +245,7 @@ class FeeCollectorContractDataFetcher(DataFetcher):
             "getEnergyFactoryAddress": self._get_hex_view,
             "getFirstWeekStartEpoch": self._get_int_view,
             "getRewardTokens": self._get_hex_list_view,
+            "getAllTokens": self._get_hex_list_view,
             "getAllKnownContracts": self._get_hex_list_view,
             "getRewardsClaimed": self._get_int_view,
             "getTokenAvailableAmount": self._get_int_view,
@@ -268,7 +275,7 @@ class StakingContractDataFetcher(DataFetcher):
             "getFarmingTokenId": self._get_hex_view,
             "getState": self._get_int_view,
             "getUserTotalFarmPosition": self._get_int_view,
-            "getCurrentWeek": self._get_int_view,
+            "getCurrentWeek": self._get_int_view,            
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserEnergyForWeek": self._get_hex_view,
@@ -309,7 +316,7 @@ class LiquidLockingContractDataFetcher(DataFetcher):
             "lockedTokens": self._get_hex_list_view,
             "unlockedTokens": self._get_hex_list_view,
             "whitelistedTokens": self._get_hex_list_view,
-            "unbondPeriod": self._get_int_view,
+            "unbondPeriod": self._get_int_view
         }
 
 
@@ -319,13 +326,15 @@ class BaseFarmContractDataFetcher(DataFetcher):
         self.view_handler_map = {
             "getFarmTokenSupply": self._get_int_view,
             "getLastRewardBlockNonce": self._get_int_view,
+            "getLastRewardTimestamp": self._get_int_view,
             "getPerBlockRewardAmount": self._get_int_view,
+            "getPerSecondRewardAmount": self._get_int_view,
             "getRewardReserve": self._get_int_view,
             "getRewardPerShare": self._get_int_view,
             "getDivisionSafetyConstant": self._get_int_view,
             "getFarmTokenId": self._get_hex_view,
             "getFarmingTokenId": self._get_hex_view,
-            "getState": self._get_int_view,
+            "getState": self._get_int_view
         }
 
 
@@ -333,7 +342,7 @@ class BaseBoostedContractDataFetcher(DataFetcher):
     def __init__(self, contract_address: Address, proxy_url: str):
         super().__init__(contract_address, proxy_url)
         self.view_handler_map = {
-            "getCurrentWeek": self._get_int_view,
+            "getCurrentWeek": self._get_int_view,            
             "getFirstWeekStartEpoch": self._get_int_view,
             "getLastGlobalUpdateWeek": self._get_int_view,
             "getUserTotalFarmPosition": self._get_int_view,
@@ -344,6 +353,7 @@ class BaseBoostedContractDataFetcher(DataFetcher):
             "getTotalLockedTokensForWeek": self._get_int_view,
             "getTotalEnergyForWeek": self._get_int_view,
             "getTotalRewardsForWeek": self._get_int_view,
+            "getAccumulatedRewardsForWeek": self._get_int_view,
             "getRemainingBoostedRewardsToDistribute": self._get_int_view,
             "getUndistributedBoostedRewards": self._get_int_view,
         }
@@ -352,8 +362,9 @@ class BaseBoostedContractDataFetcher(DataFetcher):
 class BaseContractWhitelistDataFetcher(DataFetcher):
     def __init__(self, contract_address: Address, proxy_url: str):
         super().__init__(contract_address, proxy_url)
-        self.view_handler_map = {"isSCAddressWhitelisted": self._get_int_view}
-
+        self.view_handler_map = {
+            "isSCAddressWhitelisted": self._get_int_view
+        }
 
 class PermissionsHubContractDataFetcher(DataFetcher):
     def __init__(self, contract_address: Address, proxy_url: str):

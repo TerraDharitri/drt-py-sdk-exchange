@@ -4,7 +4,8 @@ from utils.utils_chain import Account
 from utils.contract_data_fetchers import FarmContractDataFetcher, ChainDataFetcher
 from utils.utils_tx import NetworkProviders
 from utils.utils_generic import log_step_fail, log_step_pass, log_substep
-from events.farm_events import EnterFarmEvent, ExitFarmEvent, ClaimRewardsFarmEvent, SetTokenBalanceEvent
+from events.farm_events import (EnterFarmEvent, ExitFarmEvent,
+                                ClaimRewardsFarmEvent, SetTokenBalanceEvent)
 from trackers.abstract_observer import Subscriber
 from trackers.concrete_observer import Observable
 from utils.utils_chain import get_current_tokens_for_address
@@ -35,111 +36,111 @@ class FarmAccountEconomics(Subscriber):
         self.report_current_tokens()
 
     def enter_farm(self, event: EnterFarmEvent) -> None:
-        old_farming_token_balance = int(self.tokens[event.farming_tk]["balance"])
+        old_farming_token_balance = int(self.tokens[event.farming_tk]['balance'])
         farm_token = self.tokens.get(event.farm_tk, None)
-        old_farm_token_balance = farm_token["balance"] if farm_token else 0
-        old_farm_token_nonce = farm_token["nonce"] if farm_token else 0
+        old_farm_token_balance = farm_token['balance'] if farm_token else 0
+        old_farm_token_nonce = farm_token['nonce'] if farm_token else 0
 
         self.tokens = get_current_tokens_for_address(self.address, self.network_provider.proxy)
 
-        new_farming_token_balance = int(self.tokens[event.farming_tk]["balance"])
-        new_farm_token_balance = int(self.tokens[event.farm_tk]["balance"])
-        new_farm_token_nonce = int(self.tokens[event.farm_tk]["nonce"])
+        new_farming_token_balance = int(self.tokens[event.farming_tk]['balance'])
+        new_farm_token_balance = int(self.tokens[event.farm_tk]['balance'])
+        new_farm_token_nonce = int(self.tokens[event.farm_tk]['nonce'])
 
         expected_farming_token_balance = int(old_farming_token_balance) - event.farming_tk_amount
         expected_farm_token_balance = int(old_farm_token_balance) + event.farming_tk_amount
 
         if old_farm_token_nonce >= new_farm_token_nonce:
-            log_step_fail(f"Farm token nonce did not increase for {self.address.bech32()}")
-            log_substep(f"Old farm token nonce: {old_farm_token_nonce}")
-            log_substep(f"New farm token nonce: {new_farm_token_nonce}")
+            log_step_fail(f'Farm token nonce did not increase for {self.address.bech32()}')
+            log_substep(f'Old farm token nonce: {old_farm_token_nonce}')
+            log_substep(f'New farm token nonce: {new_farm_token_nonce}')
 
         if new_farming_token_balance != expected_farming_token_balance:
-            log_step_fail(f"Farming token balance did not decrease for account {self.address.bech32()}")
-            log_substep(f"Old farming token amount: {old_farming_token_balance}")
-            log_substep(f"New farming token amount: {new_farming_token_balance}")
-            log_substep(f"Expected farming token amount: {expected_farming_token_balance}")
+            log_step_fail(f'Farming token balance did not decrease for account {self.address.bech32()}')
+            log_substep(f'Old farming token amount: {old_farming_token_balance}')
+            log_substep(f'New farming token amount: {new_farming_token_balance}')
+            log_substep(f'Expected farming token amount: {expected_farming_token_balance}')
 
         if farm_token is not None:
             if new_farm_token_balance != expected_farm_token_balance:
-                log_step_fail(f"Farm token balance did not increase for account {self.address.bech32()}")
-                log_substep(f"Old farm token amount: {old_farm_token_balance}")
-                log_substep(f"New farm token amount: {new_farm_token_balance}")
-                log_substep(f"Expected farm token amount: {expected_farm_token_balance}")
+                log_step_fail(f'Farm token balance did not increase for account {self.address.bech32()}')
+                log_substep(f'Old farm token amount: {old_farm_token_balance}')
+                log_substep(f'New farm token amount: {new_farm_token_balance}')
+                log_substep(f'Expected farm token amount: {expected_farm_token_balance}')
 
-        log_step_pass("Checked enter farm event economics for account")
+        log_step_pass('Checked enter farm event economics for account')
 
     def exit_farm(self, contract, event: ExitFarmEvent) -> None:
         farm_token = self.tokens.get(event.farm_token, None)
-        old_farm_token_balance = farm_token["balance"] if farm_token else 0
+        old_farm_token_balance = farm_token['balance'] if farm_token else 0
 
         farming_token = self.tokens.get(contract.farmingToken, None)
-        old_farming_token_balance = farming_token["balance"] if farming_token else 0
+        old_farming_token_balance = farming_token['balance'] if farming_token else 0
 
         farmed_token = self.tokens.get(contract.farmedToken, None)
-        old_farmed_token_balance = farmed_token["balance"] if farmed_token else 0
+        old_farmed_token_balance = farmed_token['balance'] if farmed_token else 0
 
         self.tokens = get_current_tokens_for_address(self.address, self.network_provider.proxy)
 
-        new_farm_token_balance = int(self.tokens[event.farm_token]["balance"])
+        new_farm_token_balance = int(self.tokens[event.farm_token]['balance'])
         expected_farm_token_balance = int(old_farm_token_balance) - event.amount
 
-        new_farming_token_balance = int(self.tokens[contract.farmingToken]["balance"])
+        new_farming_token_balance = int(self.tokens[contract.farmingToken]['balance'])
         expected_farming_token_balance = old_farming_token_balance + event.amount
 
-        new_farmed_token_balance = int(self.tokens[contract.farmedToken]["balance"])
+        new_farmed_token_balance = int(self.tokens[contract.farmedToken]['balance'])
 
         if new_farm_token_balance != expected_farm_token_balance:
-            log_step_fail(f"Farm token amount did not decrease for account {self.address.bech32()}")
-            log_substep(f"Old farm token amount: {old_farm_token_balance}")
-            log_substep(f"New farm token amount: {new_farm_token_balance}")
-            log_substep(f"Expected farm token amount: {expected_farm_token_balance}")
+            log_step_fail(f'Farm token amount did not decrease for account {self.address.bech32()}')
+            log_substep(f'Old farm token amount: {old_farm_token_balance}')
+            log_substep(f'New farm token amount: {new_farm_token_balance}')
+            log_substep(f'Expected farm token amount: {expected_farm_token_balance}')
 
         if new_farming_token_balance != expected_farming_token_balance:
-            log_step_fail(f"Farming token amount did not increase for account {self.address.bech32()}")
-            log_substep(f"Old farming token amount {old_farming_token_balance}")
-            log_substep(f"New farming token amount {new_farming_token_balance}")
-            log_substep(f"Expected farming token amount {expected_farming_token_balance}")
+            log_step_fail(f'Farming token amount did not increase for account {self.address.bech32()}')
+            log_substep(f'Old farming token amount {old_farming_token_balance}')
+            log_substep(f'New farming token amount {new_farming_token_balance}')
+            log_substep(f'Expected farming token amount {expected_farming_token_balance}')
 
         if old_farmed_token_balance >= new_farmed_token_balance:
-            log_step_fail(f"Farmed token amount did not increase for account {self.address.bech32()}")
-            log_substep(f"Old farmed token amount {old_farmed_token_balance}")
-            log_substep(f"New farmed token amount {new_farmed_token_balance}")
+            log_step_fail(f'Farmed token amount did not increase for account {self.address.bech32()}')
+            log_substep(f'Old farmed token amount {old_farmed_token_balance}')
+            log_substep(f'New farmed token amount {new_farmed_token_balance}')
 
-        log_step_pass("Checked exit farm event economics for account")
+        log_step_pass('Checked exit farm event economics for account')
 
     def claim_rewards(self, contract, event: ClaimRewardsFarmEvent) -> None:
         farmed_token = self.tokens.get(contract.farmedToken, None)
-        old_farmed_token_balance = farmed_token["balance"] if farmed_token else 0
+        old_farmed_token_balance = farmed_token['balance'] if farmed_token else 0
 
         self.tokens = get_current_tokens_for_address(self.address, self.network_provider.proxy)
 
-        new_farmed_token_balance = int(self.tokens[contract.farmedToken]["balance"])
+        new_farmed_token_balance = int(self.tokens[contract.farmedToken]['balance'])
         expected_farmed_token_balance = int(old_farmed_token_balance) + event.amount
 
         if new_farmed_token_balance != expected_farmed_token_balance:
-            log_step_fail(f"Farmed token amount did not increase for account {self.address.bech32()}")
-            log_substep(f"Old farm token amount: {old_farmed_token_balance}")
-            log_substep(f"New farm token amount: {new_farmed_token_balance}")
-            log_substep(f"Expected farm token amount: {expected_farmed_token_balance}")
+            log_step_fail(f'Farmed token amount did not increase for account {self.address.bech32()}')
+            log_substep(f'Old farm token amount: {old_farmed_token_balance}')
+            log_substep(f'New farm token amount: {new_farmed_token_balance}')
+            log_substep(f'Expected farm token amount: {expected_farmed_token_balance}')
 
-        log_step_pass("Checked claim rewards event economics for account")
+        log_step_pass('Checked claim rewards event economics for account')
 
     def report_current_tokens(self):
-        log_step_pass(f"All tokens for account {self.address}")
+        log_step_pass(f'All tokens for account {self.address}')
         for key in self.tokens:
             log_substep(f'{key}: {self.tokens[key]["balance"]}')
 
     def set_token_balance(self, event: SetTokenBalanceEvent):
         if event.token not in self.tokens:
-            token = {event.token: {"nonce": event.nonce, "balance": event.balance}}
+            token = {event.token: {'nonce': event.nonce, 'balance': event.balance}}
 
             self.tokens.update(token)
         else:
-            self.tokens[event.token]["nonce"] = event.nonce
-            self.tokens[event.token]["balance"] = event.balance
+            self.tokens[event.token]['nonce'] = event.nonce
+            self.tokens[event.token]['balance'] = event.balance
 
-        log_step_pass(f"Updated token balance for account {self.address.bech32()}")
+        log_step_pass(f'Updated token balance for account {self.address.bech32()}')
 
     def update(self, publisher: Observable):
         if publisher.user.address == self.address:
@@ -241,17 +242,14 @@ class FarmEconomics(Subscriber):
         new_contract_rewards_per_share = self.farm_data_fetcher.get_data("getRewardPerShare")
         new_last_rewards_block_nonce = self.farm_data_fetcher.get_data("getLastRewardBlockNonce")
         tx_block = self.chain_data_fetcher.get_tx_block_nonce(txhash)
-        new_exp_farm_token_supply = (
-            self.farm_token_supply + event.farming_tk_amount
-        )  # farming token amount is converted to farm token amount
+        new_exp_farm_token_supply = self.farm_token_supply + event.farming_tk_amount  # farming token amount is converted to farm token amount
 
         aggregated_rewards = (tx_block - self.last_block_calculated_rewards) * self.rewards_per_block
         new_exp_rewards_reserve = self.rewards_reserve + aggregated_rewards
         # NOTE: rewards per share value applies a division safety constant in calculus which is later taken out when actual rewards are calculated
         if self.farm_token_supply != 0:
-            new_exp_rewards_per_share = self.rewards_per_share + (
-                self.division_safety_constant * aggregated_rewards // self.farm_token_supply
-            )
+            new_exp_rewards_per_share = self.rewards_per_share + \
+                                        (self.division_safety_constant * aggregated_rewards // self.farm_token_supply)
             self.rewards_per_share_wout_division = new_exp_rewards_reserve // self.farm_token_supply
             # todo: clarify if rewards per share should not consider the new farm tokens
         else:
@@ -332,19 +330,14 @@ class FarmEconomics(Subscriber):
 
         aggregated_rewards = (tx_block - self.last_block_calculated_rewards) * self.rewards_per_block
         # NOTE: rewards per share value applies a division safety constant in calculus which is later taken out when actual rewards are calculated
-        new_exp_rewards_per_share = self.rewards_per_share + (
-            self.division_safety_constant * aggregated_rewards // self.farm_token_supply
-        )
+        new_exp_rewards_per_share = self.rewards_per_share + \
+                                    (self.division_safety_constant * aggregated_rewards // self.farm_token_supply)
 
         # TODO: store a snapshot of farm tokens amounts at event creation and use it to compare afterwards for results
 
         decoded_attrs = DecodedTokenAttributes(event.attributes, self.version)
         # TODO: check what's the correct variant of calculating the drop in Rewards reserve and Rewards for exit position
-        exp_rewards = (
-            (new_exp_rewards_per_share - decoded_attrs.rewards_per_share)
-            // self.division_safety_constant
-            * event.amount
-        )
+        exp_rewards = (new_exp_rewards_per_share - decoded_attrs.rewards_per_share) // self.division_safety_constant * event.amount
         new_exp_rewards_reserve = self.rewards_reserve + aggregated_rewards - exp_rewards
         self.rewards_per_share_wout_division = new_exp_rewards_reserve // self.farm_token_supply
 
@@ -422,19 +415,14 @@ class FarmEconomics(Subscriber):
 
         aggregated_rewards = (tx_block - self.last_block_calculated_rewards) * self.rewards_per_block
         # NOTE: rewards per share value applies a division safety constant in calculus which is later taken out when actual rewards are calculated
-        new_exp_rewards_per_share = self.rewards_per_share + (
-            self.division_safety_constant * aggregated_rewards // self.farm_token_supply
-        )
+        new_exp_rewards_per_share = self.rewards_per_share + \
+                                    (self.division_safety_constant * aggregated_rewards // self.farm_token_supply)
 
         # TODO: store a snapshot of farm tokens amounts at event creation and use it to compare afterwards for results
 
         decoded_attrs = DecodedTokenAttributes(event.attributes, self.version)
         # TODO: check what's the correct variant of calculating the drop in Rewards reserve and Rewards for exit position
-        exp_rewards = (
-            (new_exp_rewards_per_share - decoded_attrs.rewards_per_share)
-            // self.division_safety_constant
-            * event.amount
-        )
+        exp_rewards = (new_exp_rewards_per_share - decoded_attrs.rewards_per_share) // self.division_safety_constant * event.amount
         new_exp_rewards_reserve = self.rewards_reserve + aggregated_rewards - exp_rewards
         self.rewards_per_share_wout_division = new_exp_rewards_reserve // self.farm_token_supply
 

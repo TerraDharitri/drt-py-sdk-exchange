@@ -36,7 +36,10 @@ def fetch_and_save_contracts(contract_addresses: list, contract_label: str, save
         code_hash = account_data.contract_code_hash.hex()
 
         if code_hash not in pairs_data:
-            pairs_data[code_hash] = {contract_label: [], "code": account_data.contract_code.hex()}
+            pairs_data[code_hash] = {
+                contract_label: [],
+                "code": account_data.contract_code.hex()
+            }
             save_wasm(account_data.contract_code.hex(), code_hash)
         pairs_data[code_hash][contract_label].append(contract_addr.bech32())
 
@@ -52,9 +55,8 @@ def fetch_contracts_states(prefix: str, network_providers: NetworkProviders, con
 
     for contract_address in contract_addresses:
         filename = get_contract_save_name(label, contract_address, prefix)
-        get_account_keys_online(
-            contract_address, network_providers.proxy.url, with_save_in=str(OUTPUT_FOLDER / f"{filename}.json")
-        )
+        get_account_keys_online(contract_address, network_providers.proxy.url,
+                                with_save_in=str(OUTPUT_FOLDER / f"{filename}.json"))
 
 
 def fetch_new_and_compare_contract_states(contract_type: str, contract_address, network_providers: NetworkProviders):
@@ -69,9 +71,8 @@ def fetch_new_and_compare_contract_states(contract_type: str, contract_address, 
 def fetch_contract_state(contract_address: str, save_name: str, network_providers: NetworkProviders):
     """Fetch contract state"""
 
-    get_account_keys_online(
-        contract_address, network_providers.proxy.url, with_save_in=str(OUTPUT_FOLDER / f"{save_name}.json")
-    )
+    get_account_keys_online(contract_address, network_providers.proxy.url,
+                            with_save_in=str(OUTPUT_FOLDER / f"{save_name}.json"))
 
 
 def save_wasm(code_data_hex: str, code_hash: str):
@@ -83,7 +84,7 @@ def save_wasm(code_data_hex: str, code_hash: str):
         os.mkdir(OUTPUT_FOLDER)
 
     output_file = os.path.join(OUTPUT_FOLDER, f"{code_hash}.wasm")
-    with open(f"{output_file}", "wb") as b:
+    with open(f"{output_file}", 'wb') as b:
         b.write(binary_string)
 
     print(f"Created wasm binary in: {output_file}")
@@ -101,7 +102,7 @@ def get_saved_contracts_data(saved_file: Path) -> dict:
     return contracts_data
 
 
-def get_saved_contract_addresses(contract_label: str, saved_file: Path, searched_bytecode_hash: str = "") -> list:
+def get_saved_contract_addresses(contract_label: str, saved_file: Path, searched_bytecode_hash: str = '') -> list:
     """Get saved contract addresses"""
 
     contracts_data = {}
@@ -124,7 +125,7 @@ def get_owner(proxy) -> Account:
 
     owner = Account.from_file(config.DEFAULT_OWNER)
     if SHADOWFORK:
-        owner.address = Address.new_from_bech32(config.DEX_OWNER_ADDRESS)  # ONLY FOR SHADOWFORK
+        owner.address = Address.new_from_bech32(config.DEX_OWNER_ADDRESS)      # ONLY FOR SHADOWFORK
     owner.sync_nonce(proxy)
     return owner
 
@@ -148,7 +149,7 @@ def run_graphql_query(uri, query):
 
     headers = {}
     status_code = 200
-    request = requests.post(uri, json={"query": query}, headers=headers, timeout=60)
+    request = requests.post(uri, json={'query': query}, headers=headers, timeout=60)
 
     if request.status_code == status_code:
         return request.json()

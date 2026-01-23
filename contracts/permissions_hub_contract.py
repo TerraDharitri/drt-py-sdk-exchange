@@ -16,13 +16,15 @@ class PermissionsHubContract(DEXContractInterface):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {"address": self.address}
+        output_dict = {
+            "address": self.address
+        }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return PermissionsHubContract(address=config_dict["address"])
-
+        return PermissionsHubContract(address=config_dict['address'])
+    
     def get_contract_tokens(self) -> list[str]:
         return []
 
@@ -31,7 +33,8 @@ class PermissionsHubContract(DEXContractInterface):
         return PermissionsHubContract(address)
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
-        """Expecting as args:"""
+        """Expecting as args:
+        """
         function_purpose = f"Deploy permissions hub contract"
         logger.info(function_purpose)
 
@@ -52,12 +55,12 @@ class PermissionsHubContract(DEXContractInterface):
         if len(args) < 1:
             log_unexpected_args(function_purpose, args)
             return ""
-
+        
         gas_limit = 30000000
         sc_args = args
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, user, Address(self.address), "whitelist", sc_args)
-
+    
     def remove_from_whitelist(self, user: Account, proxy: ProxyNetworkProvider, args: list) -> str:
         """Expecting as args:
         - whitelisted_sc_addresses: list[address]
@@ -68,12 +71,12 @@ class PermissionsHubContract(DEXContractInterface):
         if len(args) < 1:
             log_unexpected_args(function_purpose, args)
             return ""
-
+        
         gas_limit = 30000000
         sc_args = args
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, user, Address(self.address), "removeWhitelist", sc_args)
-
+    
     def add_to_blacklist(self, deployer: Account, proxy: ProxyNetworkProvider, args: list) -> str:
         """Expecting as args:
         - blacklisted_sc_addresses: list[address]
@@ -84,12 +87,12 @@ class PermissionsHubContract(DEXContractInterface):
         if len(args) < 1:
             log_unexpected_args(function_purpose, args)
             return ""
-
+        
         gas_limit = 30000000
         sc_args = args
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "blacklist", sc_args)
-
+    
     def remove_from_blacklist(self, deployer: Account, proxy: ProxyNetworkProvider, args: list) -> str:
         """Expecting as args:
         - blacklisted_sc_addresses: list[address]
@@ -100,18 +103,19 @@ class PermissionsHubContract(DEXContractInterface):
         if len(args) < 1:
             log_unexpected_args(function_purpose, args)
             return ""
-
+        
         gas_limit = 30000000
         sc_args = args
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "removeBlacklist", sc_args)
-
+    
     def is_whitelisted(self, user: str, address: str, proxy: ProxyNetworkProvider) -> bool:
         data_fetcher = PermissionsHubContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data(
-            "isWhitelisted",
-            [AddressValue.new_from_address(Address(address)), AddressValue.new_from_address(Address(user))],
-        )
+        raw_results = data_fetcher.get_data('isWhitelisted', 
+                                            [
+                                                AddressValue.new_from_address(Address(address)),
+                                                AddressValue.new_from_address(Address(user))
+                                            ])
         if not raw_results:
             return False
         return bool(raw_results)

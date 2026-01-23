@@ -33,9 +33,7 @@ def main(cli_args: List[str]):
 
     bunch_of_accounts = BunchOfAccounts.load_accounts_from_files([args.accounts])
     # bunch_of_accounts.sync_nonces(proxy)
-    accounts = (
-        bunch_of_accounts.get_all() if args.from_shard is None else bunch_of_accounts.get_in_shard(int(args.from_shard))
-    )
+    accounts = bunch_of_accounts.get_all() if args.from_shard is None else bunch_of_accounts.get_in_shard(int(args.from_shard))
     account = accounts[0]  # issue tokens only for SC owner account to improve times on large number of accounts
     account.sync_nonce(proxy)
 
@@ -46,9 +44,11 @@ def main(cli_args: List[str]):
 
     def issue_token():
         for account in accounts:
-            sc_args = [f"str:{token_id}", supply]
+            sc_args = [f'str:{token_id}', supply]
 
-            tx_config = DefaultTransactionBuildersConfiguration(network.chain_id)
+            tx_config = DefaultTransactionBuildersConfiguration(
+                network.chain_id
+            )
             contract_call = ContractCallBuilder(
                 tx_config,
                 caller=account.address.to_bech32(),
@@ -72,9 +72,7 @@ def main(cli_args: List[str]):
 
     issue_token()
 
-    hashes = broadcast_transactions(
-        transactions, proxy, args.chunk_size, sleep=args.sleep_between_chunks, confirm_yes=args.yes
-    )
+    hashes = broadcast_transactions(transactions, proxy, args.chunk_size, sleep=args.sleep_between_chunks, confirm_yes=args.yes)
 
     return hashes
 

@@ -18,13 +18,15 @@ class UnstakerContract(DEXContractInterface):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {"address": self.address}
+        output_dict = {
+            "address": self.address
+        }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return UnstakerContract(address=config_dict["address"])
-
+        return UnstakerContract(address=config_dict['address'])
+    
     def get_contract_tokens(self) -> list[str]:
         return []
 
@@ -34,10 +36,10 @@ class UnstakerContract(DEXContractInterface):
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
         """Expecting as args:
-        type[int]: unbond epochs
-        type[str]: energy factory address
-        type[int]: fees burn percentage
-        type[str]: fees collector address
+            type[int]: unbond epochs
+            type[str]: energy factory address
+            type[int]: fees burn percentage
+            type[str]: fees collector address
         """
         function_purpose = f"Deploy token unstake contract"
         logger.info(function_purpose)
@@ -52,11 +54,11 @@ class UnstakerContract(DEXContractInterface):
         arguments = args
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
-
-    def contract_upgrade(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None, no_init: bool = False
-    ):
-        """Expected as args:"""
+    
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None,
+                         no_init: bool = False):
+        """ Expected as args:
+        """
         function_purpose = f"upgrade {type(self).__name__} contract"
         logger.info(function_purpose)
 
@@ -69,15 +71,14 @@ class UnstakerContract(DEXContractInterface):
             # implement below in case of upgrade args needed
             arguments = []
 
-        tx_hash = upgrade_call(
-            type(self).__name__, proxy, gas_limit, deployer, Address(self.address), bytecode_path, metadata, arguments
-        )
+        tx_hash = upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
+                                        bytecode_path, metadata, arguments)
 
         return tx_hash
 
     def set_energy_factory_address(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[address]: energy factory address
+        """ Expected as args:
+            type[address]: energy factory address
         """
         function_purpose = "set energy factory address"
         logger.info(function_purpose)
@@ -88,24 +89,24 @@ class UnstakerContract(DEXContractInterface):
         return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setEnergyFactoryAddress", args)
 
     def claim_unlocked_tokens(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = None):
-        """Expected as args:
-        empty
+        """ Expected as args:
+            empty
         """
         function_purpose = "claim unlocked tokens"
         logger.info(function_purpose)
         return endpoint_call(proxy, 20000000, deployer, Address(self.address), "claimUnlockedTokens", [])
 
     def cancel_unbond(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = None):
-        """Expected as args:
-        empty
+        """ Expected as args:
+            empty
         """
         function_purpose = "cancel unbond"
         logger.info(function_purpose)
         return endpoint_call(proxy, 20000000, deployer, Address(self.address), "cancelUnbond", args)
-
+    
     def set_fees_burn_percentage(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
-        """Expected as args:
-        type[int]: fees burn percentage
+        """ Expected as args:
+            type[int]: fees burn percentage
         """
         function_purpose = "set fees burn percentage"
         logger.info(function_purpose)

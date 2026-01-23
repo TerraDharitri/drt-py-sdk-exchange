@@ -3,12 +3,12 @@ from .base import BaseEnvironmentSettings
 
 class TestnetSettings(BaseEnvironmentSettings):
     """Testnet environment settings."""
-
+    
     # Override defaults for testnet
     DEFAULT_PROXY: str = "https://testnet-gateway.dharitri.org"
     DEFAULT_API: str = "https://testnet-api.dharitri.org"
     GRAPHQL: str = "https://testnet-graph.dharitrix.com/graphql"
-
+    
     DEFAULT_OWNER: str = "wallets/testnet-dex-owner.pem"
     DEFAULT_ADMIN: str = "wallets/testnet-dex-owner.pem"
 

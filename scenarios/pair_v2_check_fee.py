@@ -7,12 +7,11 @@ from dharitri_py_sdk import Address
 import config
 from context import Context
 from events.event_generators import (
-    generate_add_initial_liquidity_event,
-    generate_add_liquidity_event,
-    generate_swap_fixed_input,
-)
+    generate_add_initial_liquidity_event, generate_add_liquidity_event,
+    generate_swap_fixed_input)
 from utils.utils_chain import Account
-from utils.contract_data_fetchers import FeeCollectorContractDataFetcher, PairContractDataFetcher
+from utils.contract_data_fetchers import (
+    FeeCollectorContractDataFetcher, PairContractDataFetcher)
 from ported_arrows.stress.send_token_from_minter import main as send_token_from_minter
 from ported_arrows.stress.shared import get_shard_of_address
 
@@ -25,9 +24,7 @@ def main(cli_args: List[str]):
     user_account = context.accounts.get_all()[0]
     pair_contract = context.get_pair_v2_contract(0)
     fee_collector_contract = context.get_fee_collector_contract(0)
-    contract_data_fetcher = FeeCollectorContractDataFetcher(
-        Address(fee_collector_contract.address, "drt"), context.proxy.url
-    )
+    contract_data_fetcher = FeeCollectorContractDataFetcher(Address(fee_collector_contract.address, "drt"), context.proxy.url)
     tokens = [pair_contract.firstToken, pair_contract.secondToken]
 
     # add_initial_liquidity(context=context, account=user_account)
@@ -58,11 +55,8 @@ def add_liquidity(context: Context, account: Account):
     min_time = 2
     max_time = 10
     deployer_shard = get_shard_of_address(context.deployer_account.address)
-    sleep_time = (
-        config.CROSS_SHARD_DELAY
-        if get_shard_of_address(account.address) is not deployer_shard
+    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard \
         else config.INTRA_SHARD_DELAY
-    )
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -72,7 +66,7 @@ def add_liquidity(context: Context, account: Account):
 
     wait_time = random.randint(min_time, max_time)
 
-    print(f"Finished repeat execution. Waiting for {wait_time}s.")
+    print(f'Finished repeat execution. Waiting for {wait_time}s.')
     time.sleep(wait_time)
 
 
@@ -80,11 +74,8 @@ def swap(context: Context, account: Account):
     min_time = 2
     max_time = 10
     deployer_shard = get_shard_of_address(context.deployer_account.address)
-    sleep_time = (
-        config.CROSS_SHARD_DELAY
-        if get_shard_of_address(account.address) is not deployer_shard
+    sleep_time = config.CROSS_SHARD_DELAY if get_shard_of_address(account.address) is not deployer_shard \
         else config.INTRA_SHARD_DELAY
-    )
 
     account.sync_nonce(context.network_provider.proxy)
 
@@ -94,7 +85,7 @@ def swap(context: Context, account: Account):
 
     wait_time = random.randint(min_time, max_time)
 
-    print(f"Finished repeat execution. Waiting for {wait_time}s.")
+    print(f'Finished repeat execution. Waiting for {wait_time}s.')
     time.sleep(wait_time)
 
 
@@ -112,13 +103,8 @@ def send_tokens(context: Context):
 
     for token in context.deploy_structure.tokens:
         print(f"Funding each account with {amount} {token} tokens.")
-        args = [
-            f"--proxy={proxy_url}",
-            f"--accounts={accounts}",
-            f"--minter={minter}",
-            f"--token={token}",
-            f"--amount-atoms={amount}",
-        ]
+        args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
+                f'--minter={minter}', f'--token={token}', f'--amount-atoms={amount}']
         send_token_from_minter(args)
         time.sleep(7)
 

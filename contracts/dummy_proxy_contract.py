@@ -14,13 +14,15 @@ class DummyProxyContract(DEXContractInterface):
         self.address = address
 
     def get_config_dict(self) -> dict:
-        output_dict = {"address": self.address}
+        output_dict = {
+            "address": self.address
+        }
         return output_dict
 
     @classmethod
     def load_config_dict(cls, config_dict: dict):
-        return DummyProxyContract(address=config_dict["address"])
-
+        return DummyProxyContract(address=config_dict['address'])
+    
     def get_contract_tokens(self) -> list[str]:
         return []
 
@@ -29,7 +31,8 @@ class DummyProxyContract(DEXContractInterface):
         return DummyProxyContract(address=address)
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = None):
-        """Expected as args:"""
+        """ Expected as args:
+        """
         function_purpose = f"deploy {type(self).__name__} contract"
         logger.info(function_purpose)
 
@@ -42,7 +45,7 @@ class DummyProxyContract(DEXContractInterface):
         return tx_hash, address
 
     def call_endpoint(self, user: Account, proxy: ProxyNetworkProvider, amount: int, args: list = None):
-        """
+        """ 
         Simply calls the specified endpoint on given contract address.
         Expected as args:
         type[int]: call type - 0 sync; 1 async; 2 promise; 3 transfer execute
@@ -58,7 +61,7 @@ class DummyProxyContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, user, Address(self.address), "callEndpoint", sc_args, value=str(amount))
 
     def call_internal_transfer_endpoint(self, user: Account, proxy: ProxyNetworkProvider, args: list = None):
-        """
+        """ 
         Calls the specified endpoint on given contract address while it also transfers user given tokens with the call.
         Expected as args:
         type[int]: call type - 0 sync; 1 async; 2 promise; 3 transfer execute
@@ -74,9 +77,9 @@ class DummyProxyContract(DEXContractInterface):
 
         gas_limit = 100000000
         return endpoint_call(proxy, gas_limit, user, Address(self.address), "callInternalTransferEndpoint", args)
-
+    
     def call_transfer_endpoint(self, user: Account, proxy: ProxyNetworkProvider, args: list = None):
-        """
+        """ 
         Calls the specified endpoint on given contract address while it also transfers specified tokens owned by the dummy proxy with the call.
         Expected as args:
         type[list[DCDTToken]]: tokens list
@@ -89,12 +92,11 @@ class DummyProxyContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "callTransferEndpoint", args
-        )
-
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user,
+                                        Address(self.address), "callTransferEndpoint", args)
+    
     def call_hybrid_transfer_endpoint(self, user: Account, proxy: ProxyNetworkProvider, args: list = None):
-        """
+        """ 
         Calls the specified endpoint on given contract address while it also transfers user given tokens and internally owned tokens with the call.
         Expected as args:
         type[list[DCDTToken]]: tokens list
@@ -110,9 +112,9 @@ class DummyProxyContract(DEXContractInterface):
         logger.info(function_purpose)
 
         gas_limit = 100000000
-        return multi_dcdt_endpoint_call(
-            function_purpose, proxy, gas_limit, user, Address(self.address), "callHybridTransferEndpoint", args
-        )
+        return multi_dcdt_endpoint_call(function_purpose, proxy, gas_limit, user,
+                                        Address(self.address), "callHybridTransferEndpoint", args)
+
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = None):
         pass

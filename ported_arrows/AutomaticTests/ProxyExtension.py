@@ -14,11 +14,15 @@ class NetworkStatusOnShard:
 
 class ProxyExtension(ProxyNetworkProvider):
     def do_query_with_caller(self, sc_address: str, caller_adress: str, function_name: str) -> List[str]:
-        payload = {"scAddress": sc_address, "caller": caller_adress, "funcName": function_name}
+        payload = {
+            "scAddress": sc_address,
+            "caller": caller_adress,
+            "funcName": function_name
+        }
 
-        result = self.do_post_generic("/vm-values/query", payload)
-        return_data = result["data"]
-        value = return_data["returnData"]
+        result = self.do_post_generic('/vm-values/query', payload)
+        return_data = result['data']
+        value = return_data['returnData']
         return value
 
     def do_post(self, endpoint, payload):
@@ -71,7 +75,7 @@ class ProxyExtension(ProxyNetworkProvider):
         heartbeat_info = []
         proxy = ProxyNetworkProvider(self.url)
         response = proxy.do_get_generic("node/heartbeatstatus")
-        heartbeats = response.to_dictionary()["heartbeats"]
+        heartbeats = response.to_dictionary()['heartbeats']
         for node_heartbeat in heartbeats:
             heartbeat_info.append(node_heartbeat)
         return heartbeat_info
@@ -79,7 +83,7 @@ class ProxyExtension(ProxyNetworkProvider):
     def get_validators_statistics_raw(self) -> List[dict]:
         proxy = ProxyNetworkProvider(self.url)
         response = proxy.do_get_generic("validator/statistics")
-        statistics = response.to_dictionary()["statistics"]
+        statistics = response.to_dictionary()['statistics']
         return statistics
 
     @staticmethod

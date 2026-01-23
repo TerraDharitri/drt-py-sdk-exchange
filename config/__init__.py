@@ -2,7 +2,7 @@ from pathlib import Path
 from .environments import EnvironmentSelector
 
 # Get environment settings from environment variable/.env, default to DEVNET
-CURRENT_ENV = EnvironmentSelector().get_environment()  # only used for reporting purposes
+CURRENT_ENV = EnvironmentSelector().get_environment()   # only used for reporting purposes
 env_config = EnvironmentSelector().get_environment_settings()
 
 HOME = Path().home()
@@ -44,41 +44,15 @@ PROXY_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "proxy_dex_upgrade
 PROXY_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "proxy_dex_xmoa.wasm"
 PAIR_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "pair.wasm"
 FARM_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "farm" / "output" / "farm.wasm"
-FARM_LOCKED_BYTECODE_PATH = (
-    Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "farm_with_lock" / "output" / "farm_with_lock.wasm"
-)
-FARM_COMMUNITY_BYTECODE_PATH = (
-    Path().home()
-    / "dev"
-    / "dex"
-    / "sc-dex-rs"
-    / "dex"
-    / "farm_with_community_rewards"
-    / "output"
-    / "farm_with_community_rewards.wasm"
-)
-PRICE_DISCOVERY_BYTECODE_PATH = (
-    Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "price-discovery" / "output" / "price-discovery.wasm"
-)
-STAKING_BYTECODE_PATH = (
-    Path().home() / "dev" / "dex" / "sc-dex-rs" / "farm-staking" / "farm-staking" / "output" / "farm-staking.wasm"
-)
+FARM_LOCKED_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "farm_with_lock" / "output" / "farm_with_lock.wasm"
+FARM_COMMUNITY_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "farm_with_community_rewards" / "output" / "farm_with_community_rewards.wasm"
+PRICE_DISCOVERY_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "dex" / "price-discovery" / "output" / "price-discovery.wasm"
+STAKING_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "farm-staking" / "farm-staking" / "output" / "farm-staking.wasm"
 STAKING_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "farm-staking.wasm"
 STAKING_V3_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/farm-staking.wasm"
-STAKING_PROXY_BYTECODE_PATH = (
-    Path().home()
-    / "dev"
-    / "dex"
-    / "sc-dex-rs"
-    / "farm-staking"
-    / "farm-staking-proxy"
-    / "output"
-    / "farm-staking-proxy.wasm"
-)
+STAKING_PROXY_BYTECODE_PATH = Path().home() / "dev" / "dex" / "sc-dex-rs" / "farm-staking" / "farm-staking-proxy" / "output" / "farm-staking-proxy.wasm"
 STAKING_PROXY_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "farm-staking-proxy.wasm"
-STAKING_PROXY_V3_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.0.8/farm-staking-proxy.wasm"
-)
+STAKING_PROXY_V3_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.0.8/farm-staking-proxy.wasm"
 SIMPLE_LOCK_ENERGY_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "energy-factory.wasm"
 UNSTAKER_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "token-unstake.wasm"
 FEES_COLLECTOR_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm-v3" / "fees-collector.wasm"
@@ -86,43 +60,15 @@ ROUTER_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "router.wasm"
 PAIR_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "pair.wasm"
 PAIR_VIEW_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm" / "safe-price-view.wasm"
 FARM_DEPLOYER_BYTECODE_PATH = Path().home() / "projects" / "dex" / "dex-v2" / "dexv2-rs" / "proxy-deployer.wasm"
-FARM_V2_BYTECODE_PATH = (
-    DEFAULT_WORKSPACE.home()
-    / "projects"
-    / "dex"
-    / "dex-v2"
-    / "sc-dex-rs"
-    / "output-docker"
-    / "farm-with-locked-rewards"
-    / "farm-with-locked-rewards.wasm"
-)
-FARM_V3_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/farm-with-locked-rewards.wasm"
-)
-GOVERNANCE_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.0.8/governance-v2.wasm"
-)
-POSITION_CREATOR_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/auto-pos-creator.wasm"
-)
-LOCKED_TOKEN_POSITION_CREATOR_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/locked-token-pos-creator.wasm"
-)
+FARM_V2_BYTECODE_PATH = DEFAULT_WORKSPACE.home() / "projects" / "dex" / "dex-v2" / "sc-dex-rs" / "output-docker" / "farm-with-locked-rewards" / "farm-with-locked-rewards.wasm"
+FARM_V3_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.1.1/farm-with-locked-rewards.wasm"
+GOVERNANCE_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange/releases/download/v3.0.8/governance-v2.wasm"
+POSITION_CREATOR_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/auto-pos-creator.wasm"
+LOCKED_TOKEN_POSITION_CREATOR_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/locked-token-pos-creator.wasm"
 ESCROW_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm-v3" / "lkmoa-transfer.wasm"
 LK_WRAP_BYTECODE_PATH = DEFAULT_WORKSPACE.absolute() / "wasm-v3" / "locked-token-wrapper.wasm"
-COMPOSABLE_TASKS_BYTECODE_PATH = (
-    "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/composable-tasks.wasm"
-)
-PERMISSIONS_HUBS_BYTECODE_PATH = (
-    DEFAULT_WORKSPACE.home()
-    / "projects"
-    / "dex"
-    / "dex-v2"
-    / "sc-dex-rs"
-    / "output-docker"
-    / "permissions-hub"
-    / "permissions-hub.wasm"
-)
+COMPOSABLE_TASKS_BYTECODE_PATH = "https://github.com/TerraDharitri/drt-sc-exchange-tools/releases/download/v1.0.0-rc3/composable-tasks.wasm"
+PERMISSIONS_HUBS_BYTECODE_PATH = DEFAULT_WORKSPACE.home() / "projects" / "dex" / "dex-v2" / "sc-dex-rs" / "output-docker" / "permissions-hub" / "permissions-hub.wasm"
 
 
 # ------------ Generic configuration below; Modify only in case of framework changes ------------ #
@@ -134,9 +80,9 @@ ZERO_CONTRACT_ADDRESS = "drt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 UPGRADER_OUTPUT_FOLDER = DEFAULT_CONFIG_SAVE_PATH / "upgrader_outputs"
 
 DEFAULT_GAS_BASE_LIMIT_ISSUE = 60000000
-DEFAULT_TOKEN_PREFIX = "TDEX"  # limit yourself to max 6 chars to allow automatic ticker build
-DEFAULT_TOKEN_SUPPLY_EXP = 27  # supply to be minted in exponents of 10
-DEFAULT_TOKEN_DECIMALS = 18  # decimals on minted tokens in exponents of 10
+DEFAULT_TOKEN_PREFIX = "TDEX"     # limit yourself to max 6 chars to allow automatic ticker build
+DEFAULT_TOKEN_SUPPLY_EXP = 27       # supply to be minted in exponents of 10
+DEFAULT_TOKEN_DECIMALS = 18         # decimals on minted tokens in exponents of 10
 DEFAULT_MINT_VALUE = 1  # REWA      # TODO: don't go sub-unitary cause headaches occur. just don't be cheap for now...
 
 CROSS_SHARD_DELAY = 60

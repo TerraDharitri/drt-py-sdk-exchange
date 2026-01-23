@@ -15,24 +15,22 @@ from contracts.staking_contract import StakingContract, StakingContractVersion
 logger = get_logger("manual_interactor")
 
 
-def collect_users_for_smoke_test(
-    contract_address: str, farming_token: str, farm_token: str, proxy: ProxyNetworkProvider
-) -> List[FetchedUser]:
+def collect_users_for_smoke_test(contract_address: str, farming_token: str, farm_token: str, proxy: ProxyNetworkProvider) -> List[FetchedUser]:
     mainnet_api = ApiNetworkProvider("https://api.dharitri.org")
-    fetched_users = collect_farm_contract_users(200, contract_address, farming_token, farm_token, mainnet_api, proxy)
+    fetched_users = collect_farm_contract_users(200, contract_address, farming_token, farm_token,
+                                                mainnet_api, proxy)
 
     users: List[FetchedUser] = fetched_users.get_users_with_both_tokens()
     fetch_attempts = 0
     while not users and fetch_attempts < 5:
-        fetched_users = collect_farm_contract_users(
-            200, contract_address, farming_token, farm_token, mainnet_api, proxy, fetch_attempts * 200
-        )
+        fetched_users = collect_farm_contract_users(200, contract_address, farming_token, farm_token,
+                                                    mainnet_api, proxy, fetch_attempts * 200)
         users: List[FetchedUser] = fetched_users.get_users_with_both_tokens()
         fetch_attempts += 1
     if not users:
         logger.warning(f"No users found with both tokens for {contract_address}")
         return fetched_users.get_users_with_farm_tokens()
-
+    
     return users
 
 
@@ -77,7 +75,5 @@ def parameter_pairs(type: type, proxy: ProxyNetworkProvider) -> List[Tuple[type,
         user = forge_user(users[0], proxy)
         test_parameter_pairs.append((contract, user))
 
-    print(
-        f"Done! Collected {len(test_parameter_pairs)} test parameter pairs out of {len(contract_addresses)} {type.__name__} addresses"
-    )
+    print(f"Done! Collected {len(test_parameter_pairs)} test parameter pairs out of {len(contract_addresses)} {type.__name__} addresses")
     return test_parameter_pairs

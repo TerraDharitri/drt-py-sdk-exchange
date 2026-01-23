@@ -1,3 +1,4 @@
+
 from typing import Any, List, Tuple
 
 from utils.utils_chain import Account, Address
@@ -30,15 +31,7 @@ class RawHex:
         return self.raw
 
 
-def transfer_multi_dcdt_and_execute(
-    contract_address: Address,
-    caller: Account,
-    transfers: List[Tuple[str, int]],
-    function: str,
-    args: List[Any],
-    execute_gas_limit: int,
-    network_config: ProxyNetworkProvider,
-):
+def transfer_multi_dcdt_and_execute(contract_address: Address, caller: Account, transfers: List[Tuple[str, int]], function: str, args: List[Any], execute_gas_limit: int, network_config: ProxyNetworkProvider):
     tx_data_transfer = multi_dcdt_transfer_data(contract_address, transfers)
     tx_data_execute = string_as_arg(function)
 
@@ -86,7 +79,7 @@ def token_id_as_arg(value: str):
 
 
 def string_as_arg(value: str):
-    return value.encode("ascii").hex()
+    return value.encode('ascii').hex()
 
 
 def number_as_arg(value: int):

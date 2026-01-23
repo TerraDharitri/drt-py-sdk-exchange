@@ -35,9 +35,7 @@ class DEXContractInterface(ABC):
         pass
 
     @abstractmethod
-    def contract_deploy(
-        self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list
-    ) -> tuple[str, str]:
+    def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list) -> tuple[str, str]:
         pass
 
     @abstractmethod
@@ -55,16 +53,16 @@ class DEXContractInterface(ABC):
     def change_owner_address(self, deployer: Account, proxy: ProxyNetworkProvider, new_address: str) -> str:
         function_purpose = "Change owner address of the contract"
         logger.info(function_purpose)
-
+        
         gas_limit = 20000000
         sc_args = [new_address]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "ChangeOwnerAddress", sc_args)
-
+    
     def claim_developer_rewards(self, deployer: Account, proxy: ProxyNetworkProvider) -> str:
         function_purpose = "Claim developer rewards"
         logger.info(function_purpose)
-
+        
         gas_limit = 20000000
         sc_args = []
         logger.debug(f"Arguments: {sc_args}")
@@ -184,3 +182,5 @@ class LockedAssetContractIdentity(DEXContractIdentityInterface):
     address: str
     unlocked_asset: str
     locked_asset: str
+
+

@@ -3,12 +3,12 @@ from .base import BaseEnvironmentSettings
 
 class Shadowfork4Settings(BaseEnvironmentSettings):
     """Shadowfork4 environment settings."""
-
+    
     # Override defaults for shadowfork4
     DEFAULT_PROXY: str = "https://proxy-shadowfork-four.numbat.ro"
     DEFAULT_API: str = "https://express-api-shadowfork-four.numbat.ro"
     GRAPHQL: str = "https://graph.dharitrix.com/graphql"
-
+    
     DEFAULT_OWNER: str = "wallets/C1.pem"
     DEFAULT_ADMIN: str = "wallets/C1.pem"
 
