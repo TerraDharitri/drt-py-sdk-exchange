@@ -8,7 +8,7 @@ from utils.utils_tx import multi_dcdt_endpoint_call, endpoint_call, deploy, upgr
 from utils.utils_generic import log_step_pass, log_substep, log_unexpected_args
 from utils.utils_chain import Account, WrapperAddress as Address, decode_merged_attributes, hex_to_string
 from dharitri_py_sdk import CodeMetadata, ProxyNetworkProvider
-
+from dharitri_py_sdk.abi import AddressValue
 import config
 
 
@@ -41,6 +41,9 @@ class SimpleLockEnergyContract(DEXContractInterface):
                                         locked_token=config_dict['locked_token'],
                                         lp_proxy_token=config_dict['lp_proxy_token'],
                                         farm_proxy_token=config_dict['farm_proxy_token'])
+    
+    def get_contract_tokens(self) -> list[str]:
+        return [self.locked_token]
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -319,6 +322,45 @@ class SimpleLockEnergyContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
                              "removeFromTokenTransferWhitelist", sc_args)
     
+    def add_sc_to_unlocked_token_mint_whitelist(self, deployer: Account, proxy: ProxyNetworkProvider, contract_addresses: List[str]):
+        """ Expected as args:
+            type[List[str]]: addresses
+        """
+        function_purpose = "Add SCs to Unlocked Token Mint Whitelist in simple lock energy contract"
+        logger.info(function_purpose)
+
+        gas_limit = 50000000
+        sc_args = [Address(contract_address) for contract_address in contract_addresses]
+
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "addToUnlockedTokenMintWhitelist", sc_args)
+
+    def remove_sc_from_unlocked_token_mint_whitelist(self, deployer: Account, proxy: ProxyNetworkProvider, contract_addresses: List[str]):
+        """ Expected as args:
+            type[List[str]]: addresses
+        """
+        function_purpose = "Remove SCs from Unlocked Token Mint Whitelist in simple lock energy contract"
+        logger.info(function_purpose)
+
+        gas_limit = 50000000
+        sc_args = [Address(contract_address) for contract_address in contract_addresses]
+
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "removeFromUnlockedTokenMintWhitelist", sc_args)
+    
+    def set_multisig_address(self, deployer: Account, proxy: ProxyNetworkProvider, contract_address: str):
+        """ Expected as args:
+            type[str]: address
+        """
+        function_purpose = "Set multisig address for claims in simple lock energy contract"
+        logger.info(function_purpose)
+
+        gas_limit = 10000000
+        sc_args = [Address(contract_address)]
+
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address),
+                             "setMultisigAddress", sc_args)
+    
     def set_energy_for_old_tokens(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
         """ Expected as args:
             type[str]: address
@@ -379,7 +421,7 @@ class SimpleLockEnergyContract(DEXContractInterface):
         if len(args) != 1:
             log_unexpected_args(function_purpose, args)
             return ""
-        return multi_dcdt_endpoint_call(function_purpose, proxy, 30000000,
+        return multi_dcdt_endpoint_call(function_purpose, proxy, 50000000,
                                         user, Address(self.address), "unlockEarly", args)
 
     def reduce_lock(self, user: Account, proxy: ProxyNetworkProvider, args: list):
@@ -519,7 +561,6 @@ class SimpleLockEnergyContract(DEXContractInterface):
         return endpoint_call(proxy, 10000000, deployer, Address(self.address), "adjustUserEnergy", args)
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = None):
-        self.set_transfer_role_locked_token(deployer, proxy, [])
         self.resume(deployer, proxy)
 
     def print_contract_info(self):
@@ -542,7 +583,7 @@ class SimpleLockEnergyContract(DEXContractInterface):
 
     def get_energy_for_user(self, proxy: ProxyNetworkProvider, user_address: str) -> Dict[str, Any]:
         data_fetcher = SimpleLockEnergyContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getEnergyEntryForUser', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('getEnergyEntryForUser', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         energy_entry_user = decode_merged_attributes(raw_results, decoding_structures.ENERGY_ENTRY)

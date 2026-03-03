@@ -80,6 +80,9 @@ class PairContract(DEXContractInterface):
                             lpToken=config_dict['lpToken'],
                             address=config_dict['address'],
                             version=PairContractVersion(config_dict['version']))
+    
+    def get_contract_tokens(self) -> list[str]:
+        return [self.lpToken]
 
     @classmethod
     def load_contract_by_address(cls, address: str, version=PairContractVersion.V2, proxy_contract=None):
@@ -209,7 +212,7 @@ class PairContract(DEXContractInterface):
         tx_hash, address = deploy(type(self).__name__, proxy, gas_limit, deployer, bytecode_path, metadata, arguments)
         return tx_hash, address
 
-    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list):
+    def contract_upgrade(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list, no_init: bool = False):
         """Expecting as args:
             type[str]: router address
             type[str]: whitelisted owner address
@@ -225,22 +228,25 @@ class PairContract(DEXContractInterface):
         
         gas_limit = 200000000
 
-        if len(args) < 5:
-            log_unexpected_args(function_purpose, args)
-            return ""
+        if no_init:
+            arguments = []
+        else:
+            if len(args) < 5:
+                log_unexpected_args(function_purpose, args)
+                return ""
 
-        arguments = [
-            self.firstToken,
-            self.secondToken,
-            Address(args[0]),
-            Address(args[1]),
-            args[3],
-            args[4],
-            args[2]
-        ]
+            arguments = [
+                self.firstToken,
+                self.secondToken,
+                Address(args[0]),
+                Address(args[1]),
+                args[3],
+                args[4],
+                args[2]
+            ]
 
-        if self.version == PairContractVersion.V2:
-            arguments.extend(args[5:])
+            if self.version == PairContractVersion.V2:
+                arguments.extend(args[5:])
 
         return upgrade_call(type(self).__name__, proxy, gas_limit, deployer, Address(self.address),
                             bytecode_path, metadata, arguments)
@@ -348,7 +354,7 @@ class PairContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        gas_limit = 50000000
+        gas_limit = 5500000
         sc_args = [
             Address(args[0]),
             args[1]
@@ -367,7 +373,7 @@ class PairContract(DEXContractInterface):
             log_unexpected_args(function_purpose, args)
             return ""
 
-        gas_limit = 50000000
+        gas_limit = 5000000
         sc_args = args
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setFeePercents", sc_args)
 
@@ -437,6 +443,10 @@ class PairContract(DEXContractInterface):
         gas_limit = 10000000
         sc_args = []
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setStateActiveNoSwaps", sc_args)
+    
+    def get_safe_price_round_save_interval(self, proxy: ProxyNetworkProvider):
+        data_fetcher = PairContractDataFetcher(Address(self.address), proxy.url)
+        return data_fetcher.get_data("getSafePriceRoundSaveInterval")
 
     def contract_start(self, deployer: Account, proxy: ProxyNetworkProvider, args: list = []):
         _ = self.resume(deployer, proxy)

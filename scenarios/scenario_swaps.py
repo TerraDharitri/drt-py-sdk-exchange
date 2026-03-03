@@ -60,7 +60,7 @@ def send_tokens(context: Context):
         send_token_from_minter(args)
         time.sleep(7)
 
-    print(f"Funding each account with {rewa_amount} rEWA tokens.")
+    print(f"Funding each account with {rewa_amount} REWA tokens.")
     args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
             f'--minter={minter}', f'--value-atoms={rewa_amount}']
     send_rewa_from_minter(args)

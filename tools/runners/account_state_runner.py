@@ -2,8 +2,9 @@ import json
 import os
 from argparse import ArgumentParser
 from typing import Dict, Any, Tuple
-from dharitri_py_sdk import ProxyNetworkProvider
-from dharitri_py_sdk.network_providers import errors
+from dharitri_py_sdk import ProxyNetworkProvider, NetworkProviderConfig
+from dharitri_py_sdk.network_providers.errors import NetworkProviderError
+from utils.errors import GenericError
 import requests
 from utils.utils_generic import log_step_fail, log_step_pass, log_warning, get_continue_confirmation
 from utils.logger import get_logger
@@ -21,27 +22,98 @@ def add_parsed_arguments(parser: ArgumentParser):
     parser.add_argument("--verbose", action="store_true", default=False)
 
 
-def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0, with_save_in: str = "") -> Dict[str, Any]:
-    """Get account keys from chain"""
+def get_all_keys_online_with_retry(address: str, proxy_provider: ProxyNetworkProvider, block_number: int = 0) -> Dict[str, Any]:
+    """Get account keys from chain with retry"""
 
     if block_number == 0:
         resource_url = f"address/{address}/keys"
     else:
         resource_url = f"address/{address}/keys?blockNonce={block_number}"
 
-    proxy = ProxyNetworkProvider(proxy_url)
-    response = {}
-
     while True:
         try:
-            response = proxy.do_get_generic(resource_url)
+            response = proxy_provider.do_get_generic(resource_url)
             break
-        except (requests.exceptions.RequestException, errors.GenericError) as e:
+        except (requests.exceptions.RequestException, GenericError, NetworkProviderError) as e:
             log_step_fail(f"Exception occurred while retrieving keys: {e}")
             if input("Do you want to retry? (y/n): ").lower() != "y":
                 break
 
     keys = response.get("pairs", {})
+
+    return keys
+
+
+def get_paginated_keys_online(address: str, proxy_provider: ProxyNetworkProvider, block_number: int = 0, num_keys_per_batch: int = 100) -> Dict[str, Any]:
+    """Get paginated account keys from chain using iterate-keys endpoint
+    
+    Args:
+        address: The account address to retrieve keys for
+        proxy_provider: The network provider instance
+        block_number: Optional block number to ensure consistency across requests
+        num_keys_per_batch: Number of keys to retrieve per batch (0 for maximum)
+    
+    Returns:
+        Dictionary containing all key-value pairs from the account
+    """
+    
+    if block_number == 0:
+        resource_url = "address/iterate-keys"
+    else:
+        resource_url = f"address/iterate-keys?blockNonce={block_number}"
+    
+    all_pairs = {}
+    iterator_state = []
+    
+    while True:
+        # Prepare request body
+        request_body = {
+            "address": address,
+            "numKeys": num_keys_per_batch,
+            "iteratorState": iterator_state
+        }
+        
+        try:
+            # Make POST request to iterate-keys endpoint
+            response = proxy_provider.do_post_generic(resource_url, request_body)
+            
+            # Extract pairs from response
+            data = response.get("data", {})
+            pairs = data.get("pairs", {})
+            new_iterator_state = data.get("newIteratorState")
+            
+            # Add retrieved pairs to accumulated results
+            all_pairs.update(pairs)
+            
+            # Log progress
+            logger.debug(f"Retrieved {len(pairs)} keys. Total keys so far: {len(all_pairs)}")
+            
+            # Check if iteration is complete
+            if new_iterator_state is None:
+                logger.debug(f"Iteration complete. Total keys retrieved: {len(all_pairs)}")
+                break
+            
+            # Update iterator state for next request
+            iterator_state = new_iterator_state
+            
+        except (requests.exceptions.RequestException, GenericError, NetworkProviderError) as e:
+            log_step_fail(f"Exception occurred while retrieving keys: {e}")
+            if input("Do you want to retry? (y/n): ").lower() != "y":
+                break
+    
+    return all_pairs
+
+
+def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0, with_save_in: str = "", paginated: bool = False) -> Dict[str, Any]:
+    """Get account keys from chain"""
+
+    network_config = NetworkProviderConfig(requests_options={"timeout": 60})
+    proxy = ProxyNetworkProvider(proxy_url, config=network_config)
+
+    if paginated:
+        keys = get_paginated_keys_online(address, proxy, block_number)
+    else:
+        keys = get_all_keys_online_with_retry(address, proxy, block_number)
 
     if keys and with_save_in:
         dir_path = os.path.dirname(with_save_in)
@@ -50,9 +122,39 @@ def get_account_keys_online(address: str, proxy_url: str, block_number: int = 0,
 
         with open(with_save_in, 'w', encoding="UTF-8") as state_writer:
             json.dump(keys, state_writer, indent=4)
-            logger.info(f'Dumped the retrieved contact state in: {with_save_in}')
+            logger.info(f'Dumped the retrieved account state in: {with_save_in}')
 
     return keys
+
+
+def get_account_data_online(address: str, proxy_url: str, block_number: int = 0, with_save_in: str = "") -> Dict[str, Any]:
+    """Get account data from chain"""
+
+    if block_number == 0:
+        resource_url = f"address/{address}"
+    else:
+        resource_url = f"address/{address}?blockNonce={block_number}"
+
+    proxy = ProxyNetworkProvider(proxy_url)
+    response = {}
+
+    try:
+        response = proxy.do_get_generic(resource_url)
+    except (requests.exceptions.RequestException, GenericError, NetworkProviderError) as e:
+        log_step_fail(f"Exception occurred while retrieving data: {e}")
+    
+    data = response.get("account", {})
+
+    if data and with_save_in:
+        dir_path = os.path.dirname(with_save_in)
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
+
+        with open(with_save_in, 'w', encoding="UTF-8") as state_writer:
+            json.dump(data, state_writer, indent=4)
+            logger.info(f'Dumped the retrieved account data in: {with_save_in}')
+    
+    return data
 
 
 def compare_keys(left_state: dict, right_state: dict) -> Tuple[bool, dict, dict, dict, dict]:

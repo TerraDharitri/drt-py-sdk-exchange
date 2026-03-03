@@ -1,6 +1,7 @@
 import sys
 import traceback
 
+import config
 from contracts.contract_identities import DEXContractInterface
 from utils.contract_data_fetchers import LockedAssetContractDataFetcher
 from utils.utils_tx import multi_dcdt_endpoint_call, prepare_contract_call_tx, send_contract_call_tx, deploy, upgrade_call, endpoint_call
@@ -31,6 +32,9 @@ class LockedAssetContract(DEXContractInterface):
         return LockedAssetContract(address=config_dict['address'],
                                    unlocked_asset=config_dict['unlocked_asset'],
                                    locked_asset=config_dict['locked_asset'])
+    
+    def get_contract_tokens(self) -> list[str]:
+        return [self.locked_asset]
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -38,7 +42,7 @@ class LockedAssetContract(DEXContractInterface):
         base_token = hex_to_string(data_fetcher.get_data("getAssetTokenId"))
         locked_token = hex_to_string(data_fetcher.get_data("getLockedAssetTokenId"))
 
-        return LockedAssetContract(locked_token, base_token, address)
+        return LockedAssetContract(base_token, locked_token, address)
 
     def contract_deploy(self, deployer: Account, proxy: ProxyNetworkProvider, bytecode_path, args: list = []):
         function_purpose = f"deploy {type(self).__name__} contract"

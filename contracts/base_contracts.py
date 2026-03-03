@@ -4,6 +4,7 @@
 
 from utils.logger import get_logger
 from dharitri_py_sdk import ProxyNetworkProvider
+from dharitri_py_sdk.abi import AddressValue, U64Value
 from contracts.contract_identities import DEXContractInterface
 from utils.utils_chain import Account, WrapperAddress as Address, decode_merged_attributes, hex_to_string
 from utils.utils_generic import log_unexpected_args
@@ -21,7 +22,7 @@ class BaseBoostedContract(DEXContractInterface, ABC):
     
     def get_user_total_farm_position(self, user_address: str, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getUserTotalFarmPosition', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('getUserTotalFarmPosition', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return 0
         user_farm_position = int(raw_results)
@@ -45,33 +46,13 @@ class BaseBoostedContract(DEXContractInterface, ABC):
         result = int(raw_results)
 
         return result
-    
-    def get_last_global_update_week(self, proxy: ProxyNetworkProvider) -> int:
-        data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getLastGlobalUpdateWeek')
-        if not raw_results:
-            return 0
-        result = int(raw_results)
 
-        return result
-    
-    def get_current_week(self, proxy: ProxyNetworkProvider) -> int:
-        data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getCurrentWeek')
-        if not raw_results:
-            return 0
-        current_week = int(raw_results)
+    def get_next_week_start_epoch(self, proxy: ProxyNetworkProvider) -> int:
+        first_week = self.get_first_week_start_epoch(proxy)
+        current_week = self.get_current_week(proxy)
+        next_week_at_epoch = first_week + current_week * 7
 
-        return current_week
-    
-    def get_first_week_start_epoch(self, proxy: ProxyNetworkProvider) -> int:
-        data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getFirstWeekStartEpoch')
-        if not raw_results:
-            return 0
-        result = int(raw_results)
-
-        return result
+        return next_week_at_epoch
     
     def get_last_global_update_week(self, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
@@ -84,7 +65,7 @@ class BaseBoostedContract(DEXContractInterface, ABC):
     
     def get_user_energy_for_week(self, user_address: str, proxy: ProxyNetworkProvider, week: int) -> Dict[str, Any]:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getUserEnergyForWeek', [Address(user_address).get_public_key(), week])
+        raw_results = data_fetcher.get_data('getUserEnergyForWeek', [AddressValue.new_from_address(Address(user_address)), U64Value(week)])
         if not raw_results:
             return {}
         user_energy_for_week = decode_merged_attributes(raw_results, decoding_structures.ENERGY_ENTRY)
@@ -93,7 +74,7 @@ class BaseBoostedContract(DEXContractInterface, ABC):
     
     def get_last_active_week_for_user(self, user_address: str, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getLastActiveWeekForUser', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('getLastActiveWeekForUser', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return 0
         week = int(raw_results)
@@ -102,7 +83,7 @@ class BaseBoostedContract(DEXContractInterface, ABC):
     
     def get_current_claim_progress_for_user(self, user_address: str, proxy: ProxyNetworkProvider) -> Dict[str, Any]:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getCurrentClaimProgress', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('getCurrentClaimProgress', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         response = decode_merged_attributes(raw_results, decoding_structures.USER_CLAIM_PROGRESS)
@@ -111,42 +92,49 @@ class BaseBoostedContract(DEXContractInterface, ABC):
     
     def get_farm_supply_for_week(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getFarmSupplyForWeek', [week])
+        raw_results = data_fetcher.get_data('getFarmSupplyForWeek', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
     
     def get_total_locked_tokens_for_week(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getTotalLockedTokensForWeek', [week])
+        raw_results = data_fetcher.get_data('getTotalLockedTokensForWeek', [U64Value(week)])
+        if not raw_results:
+            return 0
+        return int(raw_results)
+
+    def get_accumulated_rewards_for_week(self, proxy: ProxyNetworkProvider, week: int) -> int:
+        data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
+        raw_results = data_fetcher.get_data('getAccumulatedRewardsForWeek', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
     
     def get_total_energy_for_week(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getTotalEnergyForWeek', [week])
+        raw_results = data_fetcher.get_data('getTotalEnergyForWeek', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
     
     def get_total_rewards_for_week(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getTotalRewardsForWeek', [week])
+        raw_results = data_fetcher.get_data('getTotalRewardsForWeek', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
     
     def get_remaining_boosted_rewards_to_distribute(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getRemainingBoostedRewardsToDistribute', [week])
+        raw_results = data_fetcher.get_data('getRemainingBoostedRewardsToDistribute', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
     
     def get_undistributed_boosted_rewards(self, proxy: ProxyNetworkProvider, week: int) -> int:
         data_fetcher = BaseBoostedContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getUndistributedBoostedRewards', [week])
+        raw_results = data_fetcher.get_data('getUndistributedBoostedRewards', [U64Value(week)])
         if not raw_results:
             return 0
         return int(raw_results)
@@ -162,7 +150,9 @@ class BaseBoostedContract(DEXContractInterface, ABC):
             "first_week": self.get_first_week_start_epoch(proxy),
             "current_week": self.get_current_week(proxy),
             "farm_supply_for_week": self.get_farm_supply_for_week(proxy, week),
+            "total_rewards_for_week": self.get_total_rewards_for_week(proxy, week),
             "total_locked_tokens_for_week": self.get_total_locked_tokens_for_week(proxy, week),
+            "accumulated_rewards_for_week": self.get_accumulated_rewards_for_week(proxy, week),
             "total_energy_for_week": self.get_total_energy_for_week(proxy, week)
         }
         return staking_stats
@@ -202,6 +192,13 @@ class BaseFarmContract(DEXContractInterface, ABC):
     def get_last_reward_block_nonce(self, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = BaseFarmContractDataFetcher(Address(self.address), proxy.url)
         raw_results = data_fetcher.get_data('getLastRewardBlockNonce')
+        if not raw_results:
+            return 0
+        return int(raw_results)
+
+    def get_last_reward_timestamp(self, proxy: ProxyNetworkProvider) -> int:
+        data_fetcher = BaseFarmContractDataFetcher(Address(self.address), proxy.url)
+        raw_results = data_fetcher.get_data('getLastRewardTimestamp')
         if not raw_results:
             return 0
         return int(raw_results)
@@ -258,6 +255,7 @@ class BaseFarmContract(DEXContractInterface, ABC):
             "reward_reserve": self.get_reward_reserve(proxy),
             "reward_per_share": self.get_reward_per_share(proxy),
             "last_reward_block_nonce": self.get_last_reward_block_nonce(proxy),
+            "last_reward_timestamp": self.get_last_reward_timestamp(proxy),
             "state": self.get_state(proxy)
         }
         return farm_stats
@@ -285,8 +283,22 @@ class BaseSCWhitelistContract(DEXContractInterface, ABC):
     
     def is_contract_whitelisted(self, address: str, proxy: ProxyNetworkProvider) -> bool:
         data_fetcher = BaseContractWhitelistDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('isSCAddressWhitelisted', [Address(address).get_public_key()])
+        raw_results = data_fetcher.get_data('isSCAddressWhitelisted', [AddressValue.new_from_address(Address(address))])
         if not raw_results:
             return False
         return bool(raw_results)
+    
+
+class BasePermissionsHubContract(DEXContractInterface, ABC):
+
+    def set_permissions_hub_address(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
+        """Only V3.
+        """
+        function_purpose = "Set permissions hub address"
+        logger.info(function_purpose)
+
+        gas_limit = 10000000
+        sc_args = [address]
+        logger.debug(f"Arguments: {sc_args}")
+        return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setPermissionsHubAddress", sc_args)
     

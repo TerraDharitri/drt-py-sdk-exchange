@@ -5,8 +5,7 @@ import os
 from time import sleep
 from typing import Any
 from dharitri_py_sdk import Address
-from dharitri_py_sdk.core.transaction_builders import ContractCallBuilder, \
-    DefaultTransactionBuildersConfiguration
+from dharitri_py_sdk import SmartContractTransactionsFactory, TransactionsFactoryConfig
 from config import GRAPHQL
 from contracts.contract_identities import StakingContractVersion
 from contracts.staking_contract import StakingContract
@@ -22,7 +21,7 @@ from tools.runners.metastaking_runner import get_metastaking_addresses_from_chai
 from utils.contract_data_fetchers import StakingContractDataFetcher
 from utils.utils_chain import Account, WrapperAddress
 from utils.utils_generic import split_to_chunks, get_file_from_url_or_path
-from utils.utils_tx import DCDTToken, NetworkProviders
+from utils.utils_tx import DCDTToken, NetworkProviders, _prep_legacy_args
 import config
 
 from contracts.simple_lock_energy_contract import SimpleLockEnergyContract
@@ -263,9 +262,7 @@ def setup_boosted_parameters_with_energy_address(staking_addresses: list[str], e
     network_providers = NetworkProviders(API, PROXY)
     dex_owner = get_owner(network_providers.proxy)
 
-    energy_contract = SimpleLockEnergyContract("", "", "", "", energy_address)
     count = 1
-
     for staking_address in staking_addresses:
         print(f"Processing contract {count} / {len(staking_addresses)}: {staking_address}")
 
@@ -282,7 +279,6 @@ def setup_boosted_parameters_with_energy_address(staking_addresses: list[str], e
         hashes.append(staking_contract.set_boosted_yields_rewards_percentage(dex_owner, network_providers.proxy, STAKING_BOOSTED_REWARDS_PERCENTAGE))
         hashes.append(staking_contract.set_boosted_yields_factors(dex_owner, network_providers.proxy, STAKING_BOOSTED_YIELD_FACTORS))
         hashes.append(staking_contract.set_energy_factory_address(dex_owner, network_providers.proxy, energy_address))
-        hashes.append(energy_contract.add_sc_to_whitelist(dex_owner, network_providers.proxy, staking_address))
             
         sleep(6)
 
@@ -391,7 +387,7 @@ def generate_unstake_tokens_transactions(args: Any):
     network_providers = NetworkProviders(API, PROXY)
     network_providers.network = network_providers.proxy.get_network_config()
     chain_id = network_providers.proxy.get_network_config().chain_id
-    config_tx = DefaultTransactionBuildersConfiguration(chain_id=chain_id)
+    config_tx = TransactionsFactoryConfig(chain_id=chain_id)
     signature = get_default_signature()
     default_account = Account(None, config.DEFAULT_OWNER)
     default_account.sync_nonce(network_providers.proxy)
@@ -407,7 +403,7 @@ def generate_unstake_tokens_transactions(args: Any):
     if not args.all:
         staking_addresses = [staking_address]
 
-    with ThreadPoolExecutor(max_workers=500) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         exported_accounts = list(executor.map(sync_account_nonce, exported_accounts))
 
     for staking_address in staking_addresses:
@@ -422,7 +418,7 @@ def generate_unstake_tokens_transactions(args: Any):
             print(f"Processing account {accounts_index} / {len(accounts_with_token)}")
 
             account = Account(account_with_token.address, config.DEFAULT_OWNER)
-            account.address = WrapperAddress.from_bech32(account_with_token.address)
+            account.address = WrapperAddress(account_with_token.address)
             account.nonce = account_with_token.nonce
 
             tokens = [
@@ -435,46 +431,42 @@ def generate_unstake_tokens_transactions(args: Any):
             print(f"Found {len(tokens)} tokens to unstake for account {account_with_token.address}")
 
             for token in tokens:
-                payment_tokens = [DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_payment()]
+                payment_tokens = [DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_transfer()]
                 if not account.address.is_smart_contract():
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=Address.new_from_bech32(staking_address),
-                        function_name=function_name,
-                        caller=account.address,
-                        call_arguments=[],
-                        value=0,
-                        gas_limit=13000000,
-                        nonce=account.nonce,
-                        dcdt_transfers=payment_tokens
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        account.address,
+                        Address.new_from_bech32(staking_address),
+                        function_name,
+                        25000000,
+                        [],
+                        0,
+                        payment_tokens
                     )
-
-                    tx = builder.build()
+                    tx.nonce = account.nonce
                     tx.signature = signature
 
                     transactions.append(tx)
                     account.nonce += 1
                 elif account.address.to_bech32() not in metastaking_addresses:
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=account.address,
-                        function_name="callInternalTransferEndpoint",
-                        caller=default_account.address,
-                        call_arguments=[
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        default_account.address,
+                        account.address,
+                        "callInternalTransferEndpoint",
+                        50000000,
+                        _prep_legacy_args([
                             token.token_name,
                             int(token.token_nonce_hex, 16),
                             int(token.supply),
                             Address.new_from_bech32(staking_address),
                             function_name,
-                        ],
-                        value=0,
-                        gas_limit=50000000,
-                        nonce=default_account.nonce
+                        ]),
                     )
-                    default_account.nonce += 1
-                    tx = builder.build()
+                    tx.nonce = default_account.nonce
                     tx.signature = signature
                     transactions.append(tx)
+                    default_account.nonce += 1
 
             index = exported_accounts.index(account_with_token)
             exported_accounts[index].nonce = account.nonce

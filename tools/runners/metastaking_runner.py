@@ -4,8 +4,7 @@ from time import sleep
 from typing import Any
 
 from dharitri_py_sdk import Address
-from dharitri_py_sdk.core.transaction_builders import ContractCallBuilder, \
-    DefaultTransactionBuildersConfiguration
+from dharitri_py_sdk import SmartContractTransactionsFactory, TransactionsFactoryConfig
 from contracts.contract_identities import MetaStakingContractVersion
 from contracts.metastaking_contract import MetaStakingContract
 from events.event_generators import get_lp_from_metastake_token_attributes
@@ -19,9 +18,9 @@ from tools.runners.common_runner import add_generate_transaction_command, \
     add_verify_command, verify_contracts, fund_shadowfork_accounts, \
     get_default_signature, sync_account_nonce
 from tools.runners.farm_runner import get_farm_addresses_from_chain
-from utils.utils_chain import Account, WrapperAddress, get_bytecode_codehash
-from utils.utils_tx import DCDTToken, NetworkProviders
-from utils.utils_generic import get_file_from_url_or_path
+from utils.utils_chain import Account, WrapperAddress, get_bytecode_codehash, base64_to_hex
+from utils.utils_tx import DCDTToken, NetworkProviders, _prep_legacy_args
+from utils.utils_generic import get_file_from_url_or_path, split_to_chunks
 
 import config
 
@@ -80,6 +79,7 @@ def setup_parser(subparsers: ArgumentParser) -> ArgumentParser:
     add_generate_transaction_command(transactions_group, generate_unstake_farm_tokens_transaction, 'unstakeFarmTokens', 'unstake farm tokens command')
     add_generate_transaction_command(transactions_group, generate_stake_farm_tokens_transaction, 'stakeFarmTokens', 'stake farm tokens command')
 
+    return group_parser
 
 def fetch_and_save_metastakings_from_chain(_):
     """Fetch metastaking contracts from chain.
@@ -308,7 +308,7 @@ def generate_unstake_farm_tokens_transaction(args: Any):
     network_providers = NetworkProviders(API, PROXY)
     network_providers.network = network_providers.proxy.get_network_config()
     chain_id = network_providers.proxy.get_network_config().chain_id
-    config_tx = DefaultTransactionBuildersConfiguration(chain_id=chain_id)
+    config_tx = TransactionsFactoryConfig(chain_id=chain_id)
     signature = get_default_signature()
     default_account = Account(None, config.DEFAULT_OWNER)
     default_account.sync_nonce(network_providers.proxy)
@@ -354,47 +354,43 @@ def generate_unstake_farm_tokens_transaction(args: Any):
                     int(token.supply),
                 )
 
-                payment_tokens = [DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_payment()]
+                payment_tokens = [DCDTToken(token.token_name, int(token.token_nonce_hex, 16), int(token.supply)).to_token_transfer()]
                 if not account.address.is_smart_contract():
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=Address.new_from_bech32(metastaking_address),
-                        function_name="unstakeFarmTokens",
-                        caller=account.address,
-                        call_arguments=[1, 1, farm_token_amount],
-                        value=0,
-                        gas_limit=75000000,
-                        nonce=account.nonce,
-                        dcdt_transfers=payment_tokens
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        account.address,
+                        Address.new_from_bech32(metastaking_address),
+                        "unstakeFarmTokens",
+                        75000000,
+                        _prep_legacy_args([1, 1, farm_token_amount]),
+                        0,
+                        payment_tokens
                     )
-                    tx = builder.build()
+                    tx.nonce = account.nonce
                     tx.signature = signature
 
                     transactions.append(tx)
                     account.nonce += 1
                 else:
-                    builder = ContractCallBuilder(
-                        config=config_tx,
-                        contract=account.address,
-                        function_name="callInternalTransferEndpoint",
-                        caller=default_account.address,
-                        call_arguments=[
+                    factory = SmartContractTransactionsFactory(config_tx)
+                    tx = factory.create_transaction_for_execute(
+                        default_account.address,
+                        account.address,
+                        "callInternalTransferEndpoint",
+                        50000000,
+                        _prep_legacy_args([
                             token.token_name,
                             int(token.token_nonce_hex, 16),
                             int(token.supply),
                             Address.new_from_bech32(metastaking_address),
                             "unstakeFarmTokens",
                             1, 1, farm_token_amount
-                        ],
-                        value=0,
-                        gas_limit=50000000,
-                        nonce=default_account.nonce
+                        ]),
                     )
-                    default_account.nonce += 1
-                    tx = builder.build()
+                    tx.nonce = default_account.nonce
                     tx.signature = signature
                     transactions.append(tx)
-
+                    default_account.nonce += 1
             index = exported_accounts.index(account_with_token)
             exported_accounts[index].nonce = account.nonce
             accounts_index += 1

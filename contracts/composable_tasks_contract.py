@@ -21,6 +21,9 @@ class ComposableTasksContract(DEXContractInterface):
     @classmethod
     def load_config_dict(cls, config_dict: dict):
         return ComposableTasksContract(address=config_dict['address'])
+    
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -77,4 +80,22 @@ class ComposableTasksContract(DEXContractInterface):
 
         return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setRouterAddr", args)
 
+    def set_smart_swap_fee(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
+        """ Expected as args:
+            Type[number]: fee percentage
+        """
 
+        function_purpose = "Set smart swap fees"
+        logger.info(function_purpose)
+
+        return endpoint_call(proxy, 10000000, deployer, Address(self.address), "setSmartSwapFeePercentage", args)
+
+    def withdraw_smart_swap_fees(self, deployer: Account, proxy: ProxyNetworkProvider, args: list):
+        """ Expected as args:
+            Type[string]: tokens identifiers
+        """
+
+        function_purpose = "Withdraw smart swap fees"
+        logger.info(function_purpose)
+
+        return endpoint_call(proxy, 10000000, deployer, Address(self.address), "withdrawSmartSwapFees", args)

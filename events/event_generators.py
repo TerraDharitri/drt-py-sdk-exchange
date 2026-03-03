@@ -28,6 +28,7 @@ from utils.utils_chain import (prevent_spam_crash_numbat_proxy_go,
                                decode_merged_attributes, dec_to_padded_hex)
 from utils.utils_generic import log_step_fail
 from utils.utils_chain import Account, WrapperAddress as Address
+from dharitri_py_sdk.abi import TokenIdentifierValue, BigUIntValue
 
 
 logger = get_logger(__name__)
@@ -52,8 +53,8 @@ def generate_add_liquidity_event(context: Context, user_account: Account, pair_c
         max_amount_a = int(amount_token_a * context.add_liquidity_max_amount)
         # should do a try except block on get equivalent
         equivalent_amount_b = contract_data_fetcher.get_data("getEquivalent",
-                                                             [tokens[0],
-                                                              max_amount_a])
+                                                             [TokenIdentifierValue(tokens[0]),
+                                                              BigUIntValue(max_amount_a)])
 
         if equivalent_amount_b <= 0 or equivalent_amount_b > amount_token_b:
             log_step_fail(f'Minimum token equivalent amount not satisfied.')
@@ -111,7 +112,7 @@ def generate_remove_liquidity_event(context: Context, user_account: Account, pai
 
         amount = random.randrange(int(amount_lp_token * context.remove_liquidity_max_amount))
         token_amounts = contract_data_fetcher.get_data("getTokensForGivenPosition",
-                                                       [amount])
+                                                       [BigUIntValue(amount)])
         decoding_schema = {
             'token_id': 'string',
             'token_nonce': 'u64',
@@ -159,8 +160,8 @@ def generate_swap_fixed_input(context: Context, user_account: Account, pair_cont
                                                   int(amount_token_a * context.swap_max_tokens_to_spend))
 
         equivalent_amount_token_b = contract_data_fetcher.get_data("getAmountOut",
-                                                                   [tokens[0],
-                                                                    amount_token_a_swapped])
+                                                                   [TokenIdentifierValue(tokens[0]),
+                                                                    BigUIntValue(amount_token_a_swapped)])
 
         if equivalent_amount_token_b <= 0:
             log_step_fail(f'Minimum token equivalent amount not satisfied. Token amount: {equivalent_amount_token_b}')
@@ -208,8 +209,8 @@ def generate_swap_fixed_output(context: Context, user_account: Account, pair_con
 
         # TODO: switch to getAmountIn
         equivalent_amount_token_b = contract_data_fetcher.get_data("getAmountOut",
-                                                                   [tokens[0],
-                                                                    amount_token_a_max])
+                                                                   [TokenIdentifierValue(tokens[0]),
+                                                                    BigUIntValue(amount_token_a_max)])
         # TODO: apply slippage on token A
         event = SwapFixedOutputEvent(
             tokens[0], amount_token_a_max, tokens[1], context.get_slippaged_below_value(equivalent_amount_token_b)
@@ -233,8 +234,7 @@ def generate_random_swap_fixed_output(context: Context):
     generate_swap_fixed_output(context, userAccount, pairContract)
 
 
-def generateEnterFarmEvent(context: Context, userAccount: Account, farmContract: FarmContract, lockRewards: int = 0):
-    """lockRewards: -1 - random; 0 - unlocked rewards; 1 - locked rewards;"""
+def generateEnterFarmEvent(context: Context, userAccount: Account, farmContract: FarmContract):
     logger.info(f"Attempt generateEnterFarmEvent for {userAccount.address.bech32()} on {farmContract.address}")
     tx_hash = ""
     try:
@@ -247,8 +247,6 @@ def generateEnterFarmEvent(context: Context, userAccount: Account, farmContract:
         if farmingTkNonce == 0 and farmingTkAmount == 0:
             logger.warning(f"SKIPPED: No {farming_token} found for {userAccount.address.bech32()}!")
             return
-
-        initial = True if farmTkNonce == 0 else False
 
         # set correct token balance in case it has been changed since the init of observers
         set_token_balance_event = SetTokenBalanceEvent(farming_token, farmingTkAmount, farmingTkNonce)
@@ -265,7 +263,7 @@ def generateEnterFarmEvent(context: Context, userAccount: Account, farmContract:
         event_log.set_generic_event_data(event, userAccount.address.bech32(), farmContract)
         event_log.set_pre_event_data(context.network_provider.proxy)
 
-        tx_hash = farmContract.enterFarm(context.network_provider, userAccount, event, lockRewards, initial)
+        tx_hash = farmContract.enterFarm(context.network_provider, userAccount, event)
         context.observable.set_event(farmContract, userAccount, event, tx_hash)
 
         # post-event logging
@@ -742,7 +740,7 @@ def generateRemoveLiquidityProxyEvent(context: Context):
     context.dexProxyContract.removeLiquidityProxy(context, userAccount, event)
 
 
-def generateEnterFarmProxyEvent(context: Context, user_account: Account, farm_contract: FarmContract, lock_rewards: int = 0):
+def generateEnterFarmProxyEvent(context: Context, user_account: Account, farm_contract: FarmContract):
 
     try:
         farm_token = farm_contract.proxyContract.farm_token
@@ -764,7 +762,7 @@ def generateEnterFarmProxyEvent(context: Context, user_account: Account, farm_co
             farm_contract, farming_token, farming_tk_nonce, farming_tk_amount, farm_token, farm_tk_nonce, farm_tk_amount
         )
 
-        context.dexProxyContract.enterFarmProxy(context, user_account, event, lock_rewards, initial_enter_farm)
+        context.dexProxyContract.enterFarmProxy(context, user_account, event, initial_enter_farm)
 
     except Exception as ex:
         logger.error("Exception encountered:", ex)

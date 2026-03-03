@@ -1,6 +1,7 @@
 import config
 from contracts.contract_identities import FarmContractVersion, DEXContractInterface
-from contracts.base_contracts import BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContract
+from contracts.base_contracts import (BaseFarmContract, BaseBoostedContract, 
+                                      BaseSCWhitelistContract, BasePermissionsHubContract)
 from utils import decoding_structures
 from utils.contract_data_fetchers import FarmContractDataFetcher
 from utils.logger import get_logger
@@ -8,15 +9,16 @@ from utils.utils_tx import NetworkProviders, DCDTToken, \
     multi_dcdt_endpoint_call, deploy, upgrade_call, endpoint_call
 from utils.utils_chain import Account, WrapperAddress as Address, decode_merged_attributes, hex_to_string
 from dharitri_py_sdk import CodeMetadata, ProxyNetworkProvider
+from dharitri_py_sdk.abi import AddressValue
 from utils.utils_generic import log_step_pass, log_substep, log_unexpected_args
 from events.farm_events import (EnterFarmEvent, ExitFarmEvent, ClaimRewardsFarmEvent,
-                                CompoundRewardsFarmEvent, MigratePositionFarmEvent)
+                                CompoundRewardsFarmEvent, MergePositionFarmEvent, MigratePositionFarmEvent)
 from typing import Dict, Any
 
 logger = get_logger(__name__)
 
 
-class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContract):
+class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContract, BasePermissionsHubContract):
     def __init__(self, farming_token, farm_token, farmed_token, address, version: FarmContractVersion,
                  proxy_contract=None):
         self.farmingToken = farming_token
@@ -44,6 +46,9 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
                             farmed_token=config_dict['farmedToken'],
                             address=config_dict['address'],
                             version=FarmContractVersion(config_dict['version']))
+    
+    def get_contract_tokens(self) -> list[str]:
+        return [self.farmToken]
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -63,27 +68,43 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
             return True
         return False
 
-    def enterFarm(self, network_provider: NetworkProviders, user: Account, event: EnterFarmEvent, lock: int = 0, initial: bool = False) -> str:
+    def enterFarm(self, network_provider: NetworkProviders, user: Account, event: EnterFarmEvent) -> str:
         # TODO: remove initial parameter by using the event data
         function_purpose = "enter farm"
         logger.info(function_purpose)
         logger.debug(f"Account: {user.address}")
 
         enterFarmFn = "enterFarm"
-        if lock == 1:
-            enterFarmFn = "enterFarmAndLockRewards"
-        elif lock == 0:
-            enterFarmFn = "enterFarm"
+        logger.info(f"Calling {enterFarmFn} endpoint...")
+
+        gas_limit = 50000000
+
+        tokens = [DCDTToken(event.farming_tk, event.farming_tk_nonce, event.farming_tk_amount)]
+        if event.farm_tk_amount > 0:
+            tokens.append(DCDTToken(event.farm_tk, event.farm_tk_nonce, event.farm_tk_amount))
+
+        sc_args = [tokens]
+
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), enterFarmFn, sc_args)
+    
+    def enter_farm_on_behalf(self, network_provider: NetworkProviders, user: Account, event: EnterFarmEvent) -> str:
+        function_purpose = "enter farm on behalf"
+        logger.info(function_purpose)
+        logger.debug(f"Account: {user.address}")
+
+        enterFarmFn = "enterFarmOnBehalf"
 
         logger.info(f"Calling {enterFarmFn} endpoint...")
 
         gas_limit = 50000000
 
         tokens = [DCDTToken(event.farming_tk, event.farming_tk_nonce, event.farming_tk_amount)]
-        if not initial:
+        if event.farm_tk:
             tokens.append(DCDTToken(event.farm_tk, event.farm_tk_nonce, event.farm_tk_amount))
 
-        sc_args = [tokens]
+        sc_args = [tokens,
+                   Address(event.on_behalf)]
 
         return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
                                         Address(self.address), enterFarmFn, sc_args)
@@ -124,7 +145,28 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
 
         sc_args = [Address(event.user)] if event.user else []
         return endpoint_call(network_provider.proxy, gas_limit, user, Address(self.address), claim_fn, sc_args)
+    
+    def claim_rewards_on_behalf(self, network_provider: NetworkProviders, user: Account, event: ClaimRewardsFarmEvent) -> str:
+        function_purpose = f"claimRewardsOnBehalf"
+        logger.info(function_purpose)
+        logger.debug(f"Account: {user.address}")
 
+        gas_limit = 50000000
+        tokens = [DCDTToken(self.farmToken, event.nonce, event.amount)]
+        sc_args = [
+            tokens
+        ]
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "claimRewardsOnBehalf", sc_args)
+    
+    def collect_undistributed_boosted_rewards(self, proxy: ProxyNetworkProvider, user: Account) -> str:
+        claim_fn = 'collectUndistributedBoostedRewards'
+        logger.info(f"{claim_fn}")
+        logger.debug(f"Account: {user.address}")
+
+        gas_limit = 500000000
+
+        return endpoint_call(proxy, gas_limit, user, Address(self.address), claim_fn, [])
 
     def compoundRewards(self, network_provider: NetworkProviders, user: Account, event: CompoundRewardsFarmEvent) -> str:
         function_purpose = f"compoundRewards"
@@ -152,6 +194,25 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         ]
         return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
                                         Address(self.address), "migratePosition", sc_args)
+    
+    def mergePositions(self, network_provider: NetworkProviders, user:Account, event_list: list[MergePositionFarmEvent]) -> str:
+        function_purpose = f"mergeFarmTokens"
+        logger.info(function_purpose)
+        logger.debug(f"Account: {user.address}")
+
+        gas_limit = 50000000
+
+        tokens = [DCDTToken(self.farmToken, event.nonce, event.amount) for event in event_list]
+        
+        original_caller = next((event.original_caller for event in event_list if hasattr(event, "original_caller")), None)
+        
+        sc_args = [tokens]
+
+        if original_caller:
+            sc_args.append(original_caller)
+
+        return multi_dcdt_endpoint_call(function_purpose, network_provider.proxy, gas_limit, user,
+                                        Address(self.address), "mergeFarmTokens", sc_args)
     
     def allow_external_claim(self, network_provider: NetworkProviders, user: Account) -> str:
         fn = 'allowExternalClaimBoostedRewards'
@@ -384,7 +445,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
         sc_args = [old_address]
         logger.debug(f"Arguments: {sc_args}")
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "updateOwnerOrAdmin", sc_args)
-
+    
     def set_transfer_role_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, whitelisted_sc_address: str):
         """Only V2Boosted.
         """
@@ -439,7 +500,7 @@ class FarmContract(BaseFarmContract, BaseBoostedContract, BaseSCWhitelistContrac
     
     def get_permissions(self, address: str, proxy: ProxyNetworkProvider) -> int:
         data_fetcher = FarmContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('getPermissions', [Address(address).get_public_key()])
+        raw_results = data_fetcher.get_data('getPermissions', [AddressValue.new_from_address(Address(address))])
         if not raw_results:
             return -1
         return int(raw_results)

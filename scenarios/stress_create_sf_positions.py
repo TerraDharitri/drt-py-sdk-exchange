@@ -74,7 +74,7 @@ def swap_tokens(context: Context):
     rewa_on_purse = context.network_provider.proxy.get_account(context.admin_account.address).balance
     rewa_to_spend = min(rewa_on_purse - nominated_amount(1), max_rewa_to_spend)
     rewa_to_swap = rewa_to_spend // 2
-    logger.info(f"Swapping {rewa_to_swap} rEWA for wREWA and {rewa_to_swap} rEWA for tokens.")
+    logger.info(f"Swapping {rewa_to_swap} REWA for wREWA and {rewa_to_swap} REWA for tokens.")
 
     wrap_contracts = context.get_contracts(config.REWA_WRAPS)
     wrap_contract: Optional[RewaWrapContract] = None
@@ -86,7 +86,7 @@ def swap_tokens(context: Context):
         log_step_fail("No wrap contract found.")
         sys.exit(1)
 
-    # swap all spendable rEWA for wREWA
+    # swap all spendable REWA for wREWA
     tx_hash = wrap_contract.wrap_rewa(context.admin_account, context.network_provider.proxy, rewa_to_spend)
     context.network_provider.check_simple_tx_status(tx_hash)
 
@@ -113,7 +113,7 @@ def send_rewa(context: Context):
     minter = config.DEFAULT_ADMIN
     amount = nominated_amount(1)
 
-    logger.info(f"Funding each account with {amount} rEWA.")
+    logger.info(f"Funding each account with {amount} REWA.")
     args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
             f'--minter={minter}', f'--value-atoms={amount}']
     send_rewa_from_minter(args)

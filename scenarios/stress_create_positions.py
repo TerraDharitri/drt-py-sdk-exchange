@@ -44,14 +44,14 @@ def main(cli_args: List[str]):
     add_initial_liquidity(context)
 
     if not args.skip_minting:
-        # send rEWA for fees to users
+        # send REWA for fees to users
         send_rewa(context)
         wait_time = 40
-        logger.info(f"rEWA account minting done. Waiting for the dust to settle: {wait_time}s")
+        logger.info(f"REWA account minting done. Waiting for the dust to settle: {wait_time}s")
         time.sleep(wait_time)
 
     if not args.skip_swaping:
-        # swap rEWA in minter for DEX tokens
+        # swap REWA in minter for DEX tokens
         swap_tokens(context)
         wait_time = 12
         logger.info(f"Swapping tokens done. Waiting for the dust to settle: {wait_time}s")
@@ -83,7 +83,7 @@ def swap_tokens(context: Context):
     rewa_on_purse = context.network_provider.proxy.get_account(context.admin_account.address).balance
     rewa_to_spend = min(rewa_on_purse - nominated_amount(1), max_rewa_to_spend)
     rewa_to_swap = rewa_to_spend // 2
-    logger.info(f"Swapping {rewa_to_swap} rEWA for wREWA and {rewa_to_swap} rEWA for tokens.")
+    logger.info(f"Swapping {rewa_to_swap} REWA for wREWA and {rewa_to_swap} REWA for tokens.")
 
     wrap_contracts = context.get_contracts(config.REWA_WRAPS)
     wrap_contract: Optional[RewaWrapContract] = None
@@ -95,7 +95,7 @@ def swap_tokens(context: Context):
         log_step_fail("No wrap contract found.")
         sys.exit(1)
 
-    # swap all spendable rEWA for wREWA
+    # swap all spendable REWA for wREWA
     tx_hash = wrap_contract.wrap_rewa(context.admin_account, context.network_provider.proxy, rewa_to_spend)
     context.network_provider.check_simple_tx_status(tx_hash)
 
@@ -122,7 +122,7 @@ def send_rewa(context: Context):
     minter = config.DEFAULT_ADMIN
     amount = nominated_amount(1)
 
-    logger.info(f"Funding each account with {amount} rEWA.")
+    logger.info(f"Funding each account with {amount} REWA.")
     args = [f'--proxy={proxy_url}', f'--accounts={accounts}',
             f'--minter={minter}', f'--value-atoms={amount}']
     send_rewa_from_minter(args)

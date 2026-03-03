@@ -1,6 +1,9 @@
 ipykernel
+ipytest
 toml
 debugpy
 wget
-dharitri-sdk-cli==0.0.2
-dharitri-py-sdk==0.0.2
+pyyaml
+dharitri-py-sdk==0.0.3
+pydantic>=2.0.0
+pydantic-settings>=2.0.0

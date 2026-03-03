@@ -54,11 +54,12 @@ class DexProxyEnterFarmEvent:
 
 
 class DexProxyExitFarmEvent:
-    def __init__(self, farmContract: FarmContract, token: str, nonce: int, amount):
+    def __init__(self, farmContract: FarmContract, token: str, nonce: int, amount, original_caller: str = ""):
         self.farmContract = farmContract
         self.token = token
         self.nonce = nonce
         self.amount = amount
+        self.original_caller = original_caller
 
 
 class DexProxyClaimRewardsEvent:
@@ -106,6 +107,12 @@ class DexProxyContract(DEXContractInterface):
                                 proxy_lp_token=config_dict['proxy_lp_token'],
                                 address=config_dict['address'],
                                 version=ProxyContractVersion(config_dict['version']))
+    
+    def get_contract_tokens(self) -> list[str]:
+        return [
+            self.proxy_lp_token,
+            self.proxy_farm_token
+        ]
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -423,7 +430,7 @@ class DexProxyContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "addPairToIntermediate", [pair_address])
 
     def set_transfer_role_locked_lp_token(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
-        function_purpose = "Set transfer role on address for lp token"
+        function_purpose = "Set transfer role on address for lp token; legacy endpoint"
         logger.info(function_purpose)
 
         if address == "":
@@ -434,7 +441,7 @@ class DexProxyContract(DEXContractInterface):
         return endpoint_call(proxy, gas_limit, deployer, Address(self.address), "setTransferRoleLockedLpToken", [address])
     
     def set_transfer_role_locked_farm_token(self, deployer: Account, proxy: ProxyNetworkProvider, address: str):
-        function_purpose = "Set transfer role on address for farm token"
+        function_purpose = "Set transfer role on address for farm token; legacy endpoint"
         logger.info(function_purpose)
 
         if address == "":

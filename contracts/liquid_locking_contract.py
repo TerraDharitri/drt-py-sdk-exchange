@@ -7,6 +7,7 @@ from utils.utils_generic import log_step_pass, log_substep, log_unexpected_args
 from utils.utils_chain import Account, WrapperAddress as Address, decode_merged_attributes, hex_to_string
 from utils import decoding_structures
 from dharitri_py_sdk import CodeMetadata, ProxyNetworkProvider
+from dharitri_py_sdk.abi import AddressValue
 from typing import List, Dict, Any
 
 
@@ -29,6 +30,9 @@ class LiquidLockingContract(DEXContractInterface):
     def load_config_dict(cls, config_dict: dict):
         return LiquidLockingContract(address=config_dict['address'],
                                      whitelisted_tokens=config_dict['whitelisted_tokens'])
+    
+    def get_contract_tokens(self) -> list[str]:
+        return []
 
     @classmethod
     def load_contract_by_address(cls, address: str):
@@ -128,7 +132,7 @@ class LiquidLockingContract(DEXContractInterface):
     
     def get_locked_token_amounts(self, proxy: ProxyNetworkProvider, user_address: str) -> Dict[str, Any]:
         data_fetcher = LiquidLockingContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('lockedTokenAmounts', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('lockedTokenAmounts', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         locked_token_amounts = decode_merged_attributes(raw_results, decoding_structures.LIQUID_LOCKING_LOCKED_TOKEN_AMOUNTS)
@@ -137,7 +141,7 @@ class LiquidLockingContract(DEXContractInterface):
     
     def get_unlocked_token_amounts(self, proxy: ProxyNetworkProvider, user_address: str) -> Dict[str, Any]:
         data_fetcher = LiquidLockingContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('unlockedTokenAmounts', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('unlockedTokenAmounts', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         unlocked_token_amounts = decode_merged_attributes(raw_results, decoding_structures.LIQUID_LOCKING_UNLOCKED_TOKEN_AMOUNTS)
@@ -146,7 +150,7 @@ class LiquidLockingContract(DEXContractInterface):
     
     def get_locked_tokens(self, proxy: ProxyNetworkProvider, user_address: str) -> Dict[str, Any]:
         data_fetcher = LiquidLockingContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('lockedTokens', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('lockedTokens', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         locked_tokens = [hex_to_string(entry) for entry in raw_results]
@@ -155,7 +159,7 @@ class LiquidLockingContract(DEXContractInterface):
 
     def get_unlocked_tokens(self, proxy: ProxyNetworkProvider, user_address: str) -> Dict[str, Any]:
         data_fetcher = LiquidLockingContractDataFetcher(Address(self.address), proxy.url)
-        raw_results = data_fetcher.get_data('unlockedTokens', [Address(user_address).get_public_key()])
+        raw_results = data_fetcher.get_data('unlockedTokens', [AddressValue.new_from_address(Address(user_address))])
         if not raw_results:
             return {}
         unlocked_tokens = [hex_to_string(entry) for entry in raw_results]

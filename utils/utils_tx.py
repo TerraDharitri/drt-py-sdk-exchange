@@ -1,25 +1,24 @@
 import sys
 import time
 import traceback
+from dharitri_py_sdk.core.constants import INTEGER_MAX_NUM_BYTES
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Protocol, Sequence, Tuple, Union
 
-from dharitri_py_sdk import (Address, ApiNetworkProvider, GenericError,
-                            ProxyNetworkProvider, TokenPayment, Transaction)
-from dharitri_py_sdk.core.interfaces import ICodeMetadata
-from dharitri_py_sdk.core.transaction_builders import (
-    ContractCallBuilder, ContractDeploymentBuilder, ContractUpgradeBuilder,
-    DefaultTransactionBuildersConfiguration, MultiDCDTNFTTransferBuilder)
-from dharitri_py_sdk.network_providers.network_config import NetworkConfig
-from dharitri_py_sdk.network_providers.tokens import (
-    FungibleTokenOfAccountOnNetwork, NonFungibleTokenOfAccountOnNetwork)
-from dharitri_py_sdk.network_providers.transaction_events import \
-    TransactionEvent
-from dharitri_py_sdk.network_providers.transaction_status import \
-    TransactionStatus
-from dharitri_py_sdk.network_providers.transactions import TransactionOnNetwork
-
+from dharitri_py_sdk import (Address, ApiNetworkProvider, ProxyNetworkProvider, Transaction)
+from dharitri_py_sdk import Token, TokenTransfer
+from dharitri_py_sdk import CodeMetadata, TransactionOnNetwork
+from dharitri_py_sdk import (TransactionsFactoryConfig, SmartContractTransactionsFactory,
+                                                        TransferTransactionsFactory)
+from dharitri_py_sdk import NetworkConfig
+from dharitri_py_sdk import TokenAmountOnNetwork
+from dharitri_py_sdk import find_events_by_identifier
+from dharitri_py_sdk import TransactionEvent
+from dharitri_py_sdk import TransactionStatus
+from dharitri_py_sdk.abi import Abi
+from dharitri_py_sdk.network_providers.errors import TransactionFetchingError
 from utils.logger import get_logger
+from utils.errors import GenericError
 from utils.utils_chain import Account, WrapperAddress, log_explorer_transaction, get_bytecode_codehash
 from utils.utils_generic import (get_continue_confirmation, log_step_fail,
                                  log_unexpected_args, split_to_chunks, get_file_from_url_or_path)
@@ -31,6 +30,11 @@ API_TX_DELAY = 3
 API_LONG_TX_DELAY = 6
 API_TX_STATUS_REFETCH_DELAY = 2
 MAX_TX_FETCH_RETRIES = 50 // API_TX_DELAY
+
+
+class IArgument(Protocol):
+    def serialize(self) -> bytes:
+        ...
 
 
 class DCDTToken:
@@ -45,6 +49,13 @@ class DCDTToken:
 
     def get_token_data(self) -> tuple:
         return self.token_id, self.token_nonce, self.token_amount
+    
+    def get_token_nonce_hex(self) -> str:
+        if not self.token_nonce:
+            return ""
+        
+        nonce_str = "0" + f"{self.token_nonce:x}" if len(f"{self.token_nonce:x}") % 2 else f"{self.token_nonce:x}"
+        return nonce_str
 
     def get_full_token_name(self) -> str:
         if self.token_nonce != 0:
@@ -54,19 +65,21 @@ class DCDTToken:
             return f"{self.token_id}"
 
     @classmethod
-    def from_token_payment(cls, token_payment: TokenPayment):
-        return cls(token_payment.token_identifier, token_payment.token_nonce, token_payment.amount_as_integer)
+    def from_token_transfer(cls, token_transfer: TokenTransfer):
+        return cls(token_transfer.token.identifier, token_transfer.token.nonce, token_transfer.amount)
 
     @classmethod
-    def from_fungible_on_network(cls, token: FungibleTokenOfAccountOnNetwork):
-        return cls(token.identifier, 0, token.balance)
-
+    def from_amount_on_network(cls, token: TokenAmountOnNetwork):
+        return cls(token.token.identifier, token.token.nonce, token.amount)
+    
     @classmethod
-    def from_non_fungible_on_network(cls, token: NonFungibleTokenOfAccountOnNetwork):
-        return cls(token.identifier, token.nonce, token.balance)
+    def from_full_token_name(cls, token_name: str):
+        # token id is everything before the last dash while nonce is everything after
+        token_id, token_nonce = token_name.rsplit("-", 1)
+        return cls(token_id, int(token_nonce, 16), 0)
 
-    def to_token_payment(self) -> TokenPayment:
-        return TokenPayment(self.token_id, self.token_nonce, self.token_amount, 18)
+    def to_token_transfer(self) -> TokenTransfer:
+        return TokenTransfer(Token(self.token_id, self.token_nonce), self.token_amount)
 
 
 class NetworkProviders:
@@ -80,9 +93,9 @@ class NetworkProviders:
         results = None
         while True:
             try:
-                results = self.api.get_transaction_status(tx_hash)
+                results = self.api.get_transaction(tx_hash).status
                 break   # if no exception, we got the results
-            except GenericError as e:
+            except (TransactionFetchingError, GenericError) as e:
                 logger.debug(f"Transaction not found. Exception: {e.data}")
                 if e.data['statusCode'] == 404:
                     # api didn't index the transaction yet, try again after a delay
@@ -96,9 +109,9 @@ class NetworkProviders:
         if status is None:
             log_step_fail(f"Wait failed. Transaction {tx_hash} not found!")
             return None
-        while not status.is_executed():
+        while not status.is_completed:
             time.sleep(API_TX_STATUS_REFETCH_DELAY)
-            status = self.api.get_transaction_status(tx_hash)
+            status = self.api.get_transaction(tx_hash).status
             logger.debug(f"Transaction {tx_hash} status: {status.status}")
         return status
 
@@ -109,7 +122,7 @@ class NetworkProviders:
             return False
 
         status = self.wait_for_tx_executed(tx_hash)
-        if status is None or status.is_failed() or address == "":
+        if status is None or status.is_failed or address == "":
             if msg_label:
                 log_step_fail(f"FAIL: transaction for {msg_label} contract deployment failed "
                                      f"or couldn't retrieve address!")
@@ -158,15 +171,15 @@ class NetworkProviders:
             log_step_fail(f"FAIL: couldn't retrieve transaction {tx_hash} status!")
             return False
 
-        if results.is_failed():
+        if results.is_failed:
             if msg_label:
                 log_step_fail(f"Transaction to {msg_label} failed!")
             return False
         logger.debug(f"Transaction {tx_hash} status: {results.status}")
         return True
 
-    def get_tx_operations(self, tx_hash: str) -> list:
-        if tx_hash not in TX_CACHE:
+    def get_tx_operations(self, tx_hash: str, no_cache: bool = False) -> list:
+        if no_cache or tx_hash not in TX_CACHE:
             # TODO replace with get_transaction after operations are added to the transaction object
             transaction = self.api.do_get_generic(f'transactions/{tx_hash}')
             TX_CACHE[tx_hash] = transaction     # add it into the hash cache to avoid fetching it again
@@ -239,82 +252,120 @@ class NetworkProviders:
                 return True
         return False
 
-    def wait_for_epoch(self, target_epoch, idle_time=30):
+    def wait_for_epoch(self, target_epoch: int, idle_time: int = 30):
         status = self.proxy.get_network_status()
-        while status.epoch_number < target_epoch:
+        while status.current_epoch < target_epoch:
             status = self.proxy.get_network_status
             time.sleep(idle_time)
 
-    def wait_for_nonce_in_shard(self, shard_id: int, target_nonce: int, idle_time=6):
+    def wait_for_nonce_in_shard(self, shard_id: int, target_nonce: int, idle_time: int = 6):
         status = self.proxy.get_network_status(shard_id)
-        while status.nonce < target_nonce:
+        while status.block_nonce < target_nonce:
             status = self.proxy.get_network_status(shard_id)
             time.sleep(idle_time)
 
-    def wait_epochs(self, num_epochs, idle_time=30):
+    def wait_epochs(self, num_epochs: int, idle_time: int = 30):
         status = self.proxy.get_network_status()
-        next_epoch = status.epoch_number + num_epochs
-        while status.epoch_number < next_epoch:
+        next_epoch = status.current_epoch + num_epochs
+        while status.current_epoch < next_epoch:
             status = self.proxy.get_network_status()
             time.sleep(idle_time)
 
-    def get_round(self):
-        status = self.proxy.get_network_status(0)
+    def get_round(self, shard_id: int = 1) -> int:
+        status = self.proxy.get_network_status(shard_id)
         return status.current_round
 
 
-def _prep_args_for_addresses(args: List):
-    # TODO: remove this when the SDK supports bech32 addresses... or refactor the thing entirely
-    new_args = []
-    for item in args:
-        if type(item) is str and "drt" in item:
-            item = WrapperAddress(item)
-        new_args.append(item)
-    return new_args
+def _get_flags_from_code_metadata(code_metadata: CodeMetadata) -> tuple[bool, bool, bool, bool]:
+    return code_metadata.upgradeable, code_metadata.readable, code_metadata.payable, code_metadata.payable_by_contract
+
+
+def encode_unsigned_number(arg: int) -> bytes:
+    return arg.to_bytes(INTEGER_MAX_NUM_BYTES, byteorder="big", signed=False).lstrip(bytes([0]))
+
+
+def encode_signed_number(arg: int) -> bytes:
+    if arg == 0:
+        return b''
+    length = ((arg + (arg < 0)).bit_length() + 7 + 1) // 8
+    return arg.to_bytes(length, byteorder="big", signed=True)
+
+
+def _arg_to_buffer(arg: Any) -> bytes:
+    if isinstance(arg, str):
+        if arg.startswith("drt1"):
+            return Address.from_bech32(arg).get_public_key()
+        return arg.encode("utf-8")
+    if isinstance(arg, int):
+        if arg < 0:
+            return encode_signed_number(arg)
+        return encode_unsigned_number(arg)
+    if isinstance(arg, Address):
+        return arg.get_public_key()
+    return arg
+
+
+def _args_to_buffers(args: Sequence[Any]) -> List[Any]:
+    return [_arg_to_buffer(arg) for arg in args]
+
+
+def _prep_legacy_args(args: List[Any]) -> List[Any]:
+    # This is now an important piece of code, as it's used to serialize the old untyped arguments without changing EVERYTHING
+    return _args_to_buffers(args)
 
 
 def prepare_deploy_tx(deployer: Account, network_config: NetworkConfig,
-                      gas_limit: int, contract_file: Path, code_metadata: ICodeMetadata,
-                      args: list = None) -> Transaction:
-    config = DefaultTransactionBuildersConfiguration(chain_id=network_config.chain_id)
-    args = _prep_args_for_addresses(args)
+                      gas_limit: int, contract_file: Path, code_metadata: CodeMetadata,
+                      args: list = None, value: int = 0, abi: Abi = None) -> Transaction:
+    config = TransactionsFactoryConfig(chain_id=network_config.chain_id)
+
     logger.debug(f"Deploy arguments: {args}")
     logger.debug(f"Bytecode codehash: {get_bytecode_codehash(contract_file)}")
-    builder = ContractDeploymentBuilder(
-        config=config,
-        owner=deployer.address,
-        gas_limit=gas_limit,
-        code_metadata=code_metadata,
-        code=contract_file.read_bytes(),
-        deploy_arguments=args,
-        nonce=deployer.nonce
-    )
 
-    tx = builder.build()
+    factory = SmartContractTransactionsFactory(config, abi) if abi else SmartContractTransactionsFactory(config)
+    call_args = _prep_legacy_args(args) if not abi else args
+    upgradeable, readable, payable, payable_by_contract = _get_flags_from_code_metadata(code_metadata)
+    tx = factory.create_transaction_for_deploy(
+        deployer.address,
+        contract_file.read_bytes(),
+        gas_limit,
+        call_args,
+        native_transfer_amount=value,
+        is_upgradeable=upgradeable,
+        is_readable=readable,
+        is_payable=payable,
+        is_payable_by_sc=payable_by_contract,
+    )
+    tx.nonce = deployer.nonce
     tx.signature = deployer.sign_transaction(tx)
 
     return tx
 
 
-def prepare_upgrade_tx(deployer: Account, contract_address: Address, network_config: NetworkConfig,
-                       gas_limit: int, contract_file: Path, code_metadata: ICodeMetadata,
-                       args: list = None) -> Transaction:
-    config = DefaultTransactionBuildersConfiguration(chain_id=network_config.chain_id)
-    args = _prep_args_for_addresses(args)
+def prepare_upgrade_tx(contract_address: Address, deployer: Account, network_config: NetworkConfig,
+                       gas_limit: int, contract_file: Path, code_metadata: CodeMetadata,
+                       args: list = None, value: int = 0, abi: Abi = None) -> Transaction:
+    config = TransactionsFactoryConfig(chain_id=network_config.chain_id)
+
     logger.debug(f"Upgrade arguments: {args}")
     logger.debug(f"Bytecode codehash: {get_bytecode_codehash(contract_file)}")
-    builder = ContractUpgradeBuilder(
-        config=config,
-        contract=contract_address,
-        owner=deployer.address,
-        gas_limit=gas_limit,
-        code_metadata=code_metadata,
-        code=contract_file.read_bytes(),
-        upgrade_arguments=args,
-        nonce=deployer.nonce
-    )
 
-    tx = builder.build()
+    factory = SmartContractTransactionsFactory(config, abi) if abi else SmartContractTransactionsFactory(config)
+    call_args = _prep_legacy_args(args) if not abi else args
+    upgradeable, readable, payable, payable_by_contract = _get_flags_from_code_metadata(code_metadata)
+    tx = factory.create_transaction_for_upgrade(
+        deployer.address,
+        contract_address,
+        contract_file.read_bytes(),
+        gas_limit,
+        call_args,
+        native_transfer_amount=value,
+        is_upgradeable=upgradeable,
+        is_readable=readable,
+        is_payable=payable,
+        is_payable_by_sc=payable_by_contract,
+    )
+    tx.nonce = deployer.nonce
     tx.signature = deployer.sign_transaction(tx)
 
     return tx
@@ -322,22 +373,23 @@ def prepare_upgrade_tx(deployer: Account, contract_address: Address, network_con
 
 def prepare_contract_call_tx(contract_address: Address, deployer: Account,
                              network_config: NetworkConfig, gas_limit: int,
-                             function: str, args: list, value: str = "0") -> Transaction:
+                             function: str, args: list, value: int = 0, abi: Abi = None) -> Transaction:
 
-    config = DefaultTransactionBuildersConfiguration(chain_id=network_config.chain_id)
-    args = _prep_args_for_addresses(args)
+    config = TransactionsFactoryConfig(chain_id=network_config.chain_id)
+    
     logger.debug(f"Contract call arguments: {args}")
-    builder = ContractCallBuilder(
-        config=config,
-        contract=contract_address,
-        function_name=function,
-        caller=deployer.address,
-        call_arguments=args,
-        value=value,
-        gas_limit=gas_limit,
-        nonce=deployer.nonce,
+    factory = SmartContractTransactionsFactory(config, abi) if abi else SmartContractTransactionsFactory(config)
+    call_args = _prep_legacy_args(args) if not abi else args
+
+    tx = factory.create_transaction_for_execute(
+        deployer.address,
+        contract_address,
+        function,
+        gas_limit,
+        call_args,
+        int(value)
     )
-    tx = builder.build()
+    tx.nonce = deployer.nonce
     tx.signature = deployer.sign_transaction(tx)
 
     return tx
@@ -346,23 +398,24 @@ def prepare_contract_call_tx(contract_address: Address, deployer: Account,
 def prepare_multidcdtnfttransfer_to_endpoint_call_tx(contract_address: Address, user: Account,
                                                      network_config: NetworkConfig, gas_limit: int,
                                                      endpoint: str, endpoint_args: list, tokens: List[DCDTToken],
-                                                     value: str = "0") -> Transaction:
-    config = DefaultTransactionBuildersConfiguration(chain_id=network_config.chain_id)
-    payment_tokens = [token.to_token_payment() for token in tokens]
-    endpoint_args = _prep_args_for_addresses(endpoint_args)
+                                                     value: int = 0, abi: Abi = None) -> Transaction:
+    config = TransactionsFactoryConfig(chain_id=network_config.chain_id)
+    payment_tokens = [token.to_token_transfer() for token in tokens]
+    
     logger.debug(f"Contract call arguments: {endpoint_args}")
-    builder = ContractCallBuilder(
-        config=config,
-        contract=contract_address,
-        function_name=endpoint,
-        caller=user.address,
-        call_arguments=endpoint_args,
-        value=value,
-        gas_limit=gas_limit,
-        nonce=user.nonce,
-        dcdt_transfers=payment_tokens
+
+    factory = SmartContractTransactionsFactory(config, abi) if abi else SmartContractTransactionsFactory(config)
+    call_args = _prep_legacy_args(endpoint_args) if not abi else endpoint_args
+    tx = factory.create_transaction_for_execute(
+        user.address,
+        contract_address,
+        endpoint,
+        gas_limit,
+        call_args,
+        int(value),
+        payment_tokens
     )
-    tx = builder.build()
+    tx.nonce = user.nonce
     tx.signature = user.sign_transaction(tx)
 
     return tx
@@ -370,27 +423,27 @@ def prepare_multidcdtnfttransfer_to_endpoint_call_tx(contract_address: Address, 
 
 def prepare_multidcdtnfttransfer_tx(destination: Address, user: Account,
                                     network_config: NetworkConfig, gas_limit: int,
-                                    tokens: List[DCDTToken], value: str = "0") -> Transaction:
-    config = DefaultTransactionBuildersConfiguration(chain_id=network_config.chain_id)
-    payment_tokens = [token.to_token_payment() for token in tokens]
-    builder = MultiDCDTNFTTransferBuilder(
-        config=config,
-        sender=user.address,
-        destination=destination,
-        payments=payment_tokens,
-        gas_limit=gas_limit,
-        value=value,
-        nonce=user.nonce,
-    )
+                                    tokens: List[DCDTToken], value: int = 0) -> Transaction:
+    """
+    TODO: cleanup: gas_limit and value are ignored for this transaction type
+    """
+    config = TransactionsFactoryConfig(chain_id=network_config.chain_id)
+    payment_tokens = [token.to_token_transfer() for token in tokens]
 
-    tx = builder.build()
+    factory = TransferTransactionsFactory(config)
+    tx = factory.create_transaction_for_dcdt_token_transfer(
+        user.address,
+        destination,
+        payment_tokens
+    )
+    tx.nonce = user.nonce
     tx.signature = user.sign_transaction(tx)
     return tx
 
 
 def send_deploy_tx(tx: Transaction, proxy: ProxyNetworkProvider) -> str:
     try:
-        tx_hash = proxy.send_transaction(tx)
+        tx_hash = proxy.send_transaction(tx).hex()
         log_explorer_transaction(tx_hash, proxy.url)
     except Exception as ex:
         log_step_fail(f"Failed to deploy due to: {ex}")
@@ -402,7 +455,7 @@ def send_deploy_tx(tx: Transaction, proxy: ProxyNetworkProvider) -> str:
 
 def send_contract_call_tx(tx: Transaction, proxy: ProxyNetworkProvider) -> str:
     try:
-        tx_hash = proxy.send_transaction(tx)
+        tx_hash = proxy.send_transaction(tx).hex()
         # TODO: check if needed to wait for tx to be processed
         log_explorer_transaction(tx_hash, proxy.url)
     except Exception as ex:
@@ -414,7 +467,7 @@ def send_contract_call_tx(tx: Transaction, proxy: ProxyNetworkProvider) -> str:
 
 
 def multi_dcdt_endpoint_call(function_purpose: str, proxy: ProxyNetworkProvider, gas: int,
-                             user: Account, contract: Address, endpoint: str, args: list):
+                             user: Account, contract: Address, endpoint: str, args: list, value: int = 0, abi: Abi = None):
     """ Expected as args:
         type[List[DCDTToken]]: tokens list
         opt: type[str..]: endpoint arguments
@@ -429,7 +482,7 @@ def multi_dcdt_endpoint_call(function_purpose: str, proxy: ProxyNetworkProvider,
 
     ep_args = args[1:] if len(args) != 1 else []
     tx = prepare_multidcdtnfttransfer_to_endpoint_call_tx(contract, user, network_config,
-                                                          gas, endpoint, ep_args, args[0])
+                                                          gas, endpoint, ep_args, args[0], value, abi)
     tx_hash = send_contract_call_tx(tx, proxy)
     user.nonce += 1 if tx_hash != "" else 0
 
@@ -457,7 +510,7 @@ def multi_dcdt_transfer(proxy: ProxyNetworkProvider, gas: int, user: Account, de
 
 
 def endpoint_call(proxy: ProxyNetworkProvider, gas: int, user: Account, contract: Address, endpoint: str, args: list,
-                  value: str = "0"):
+                  value: int = 0, abi: Abi = None):
     """ Expected as args:
         opt: type[str..]: endpoint arguments
     """
@@ -465,7 +518,7 @@ def endpoint_call(proxy: ProxyNetworkProvider, gas: int, user: Account, contract
     logger.debug(f"Args: {args}")
     network_config = proxy.get_network_config()     # TODO: find solution to avoid this call
 
-    tx = prepare_contract_call_tx(contract, user, network_config, gas, endpoint, args, value)
+    tx = prepare_contract_call_tx(contract, user, network_config, gas, endpoint, args, value, abi)
     tx_hash = send_contract_call_tx(tx, proxy)
     user.nonce += 1 if tx_hash != "" else 0
 
@@ -473,13 +526,13 @@ def endpoint_call(proxy: ProxyNetworkProvider, gas: int, user: Account, contract
 
 
 def deploy(contract_label: str, proxy: ProxyNetworkProvider, gas: int,
-           owner: Account, bytecode_path: str, metadata: ICodeMetadata, args: list) -> Tuple[str, str]:
+           owner: Account, bytecode_path: str, metadata: CodeMetadata, args: list, value: int = 0, abi: Abi = None) -> Tuple[str, str]:
     logger.debug(f"Deploy {contract_label}")
     network_config = proxy.get_network_config()     # TODO: find solution to avoid this call
     tx_hash, contract_address = "", ""
     processed_bytecode_path = get_file_from_url_or_path(bytecode_path)
 
-    tx = prepare_deploy_tx(owner, network_config, gas, processed_bytecode_path, metadata, args)
+    tx = prepare_deploy_tx(owner, network_config, gas, processed_bytecode_path, metadata, args, value, abi)
     tx_hash = send_deploy_tx(tx, proxy)
 
     if tx_hash:
@@ -490,13 +543,13 @@ def deploy(contract_label: str, proxy: ProxyNetworkProvider, gas: int,
 
 
 def upgrade_call(contract_label: str, proxy: ProxyNetworkProvider, gas: int,
-                 owner: Account, contract: Address, bytecode_path: str, metadata: ICodeMetadata,
-                 args: list) -> str:
+                 owner: Account, contract: Address, bytecode_path: str, metadata: CodeMetadata,
+                 args: list, value: int = 0, abi: Abi = None) -> str:
     logger.debug(f"Upgrade {contract_label} contract")
     network_config = proxy.get_network_config()     # TODO: find solution to avoid this call
     processed_bytecode_path = get_file_from_url_or_path(bytecode_path)
 
-    tx = prepare_upgrade_tx(owner, contract, network_config, gas, processed_bytecode_path, metadata, args)
+    tx = prepare_upgrade_tx(contract, owner, network_config, gas, processed_bytecode_path, metadata, args, value, abi)
     tx_hash = send_contract_call_tx(tx, proxy)
     owner.nonce += 1 if tx_hash != "" else 0
 
@@ -506,7 +559,7 @@ def upgrade_call(contract_label: str, proxy: ProxyNetworkProvider, gas: int,
 def check_error_from_event(tx_result: TransactionOnNetwork) -> bool:
     searched_event_id = ["signalError", "internalVMErrors"]
     for event_id in searched_event_id:
-        error_event = tx_result.logs.find_first_or_none_event(event_id)
+        error_event = find_events_by_identifier(tx_result, event_id)
         if error_event is not None:
             return True
     return False
@@ -515,15 +568,15 @@ def check_error_from_event(tx_result: TransactionOnNetwork) -> bool:
 def get_event_from_tx(event_id: str, tx_hash: str, proxy: ProxyNetworkProvider) -> Union[TransactionEvent, None]:
     try:
         time.sleep(API_TX_DELAY)
-        while not proxy.get_transaction_status(tx_hash).is_executed():
+        while not proxy.get_transaction_status(tx_hash).is_completed:
             time.sleep(6)
 
-        if not proxy.get_transaction_status(tx_hash).is_successful():
+        if not proxy.get_transaction_status(tx_hash).is_successful:
             logger.debug(f"Transaction {tx_hash} failed.")
             return None
 
         tx = proxy.get_transaction(tx_hash)
-        event = tx.logs.find_first_or_none_event(event_id)
+        event = find_events_by_identifier(tx,event_id)[0]
 
         # if event is still not available, but the transaction was successful, try fetching again until either event is
         # available or transaction is failed
@@ -536,7 +589,7 @@ def get_event_from_tx(event_id: str, tx_hash: str, proxy: ProxyNetworkProvider) 
                 return None
             time.sleep(API_TX_DELAY)
             tx = proxy.get_transaction(tx_hash)
-            event = tx.logs.find_first_or_none_event(event_id)
+            event = find_events_by_identifier(tx,event_id)[0]
 
     except Exception as ex:
         logger.exception(f"Failed to get event due to: {ex}")
@@ -546,6 +599,8 @@ def get_event_from_tx(event_id: str, tx_hash: str, proxy: ProxyNetworkProvider) 
 
 
 def get_deployed_address_from_tx(tx_hash: str, proxy: ProxyNetworkProvider) -> str:
+    if "localhost" in proxy.url:
+        proxy.do_post_generic(f"simulator/generate-blocks/1", {})
     event = get_event_from_tx("SCDeploy", tx_hash, proxy)
     if event is None:
         return ""
@@ -569,7 +624,7 @@ def broadcast_transactions(transactions: List[Transaction], proxy: ProxyNetworkP
             logger.debug(f"sent {num_sent} instead of {len(chunk)}")
 
         chunk_index += 1
-        hashes.extend(sent_hashes)
+        hashes.extend([hash.hex() for hash in sent_hashes])
 
         if sleep is not None:
             time.sleep(sleep)
